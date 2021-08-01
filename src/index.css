@@ -1,13 +1,373 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/*************************************Custom Properties********************************/
+:root {
+    --light-grey : #c0bdbd;
+    --bg-gradient-start : #7F00FF;
+    --bg-gradient-end: #E100FF;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+* {
+  margin: 0;
+  box-sizing: border-box;
+}
+
+input {
+  outline-width: 0;
+}
+
+.App{
+  height: 100vh;
+}
+
+/******************************Auth************************/
+
+.auth-page {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  background-image: linear-gradient(to bottom right, var(--bg-gradient-start), var(--bg-gradient-end));
+}
+
+.auth-box{
+  display: flex;
+  width: 75%;
+  height: 90%;
+  margin-left: auto;
+  margin-right: auto;
+  border-radius: 20px;
+  background-color: white;
+}
+
+.auth-creds-sec
+{
+  flex-grow: 2;
+  flex-basis: 60%;
+  border-top-left-radius: 20px;
+  border-bottom-left-radius: 20px;
+  border-right: 1px solid black;
+  padding: 10px;
+  font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+}
+
+.auth-anim-sec{
+  flex-grow: 1;
+  flex-basis: 50%;
+  border-top-right-radius: 20px;
+  border-bottom-right-radius: 20px;
+}
+
+.auth-creds-sec h1 {
+  text-align: center;
+  margin-top: 10px;
+  font-style: italic;
+  font-size: 40px;
+}
+
+.auth-creds-sec h3 {
+  text-align: center;
+  margin-top: 60px;
+  color: #4b4a4a;
+}
+
+.auth-creds-sec form {
+  margin-top: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.auth-creds-sec input {
+  padding: 20px;
+  border: 1px solid grey;
+  border-radius: 10px;
+  font-size: 20px;
+  margin-top: 10px;
+}
+
+.auth-creds-sec input:focus{
+  border: 0px;
+  border-left: 4px solid var(--bg-gradient-start);
+  border-top: 1px solid grey;
+  border-right: 1px solid grey;
+  border-bottom: 1px solid grey;
+}
+
+.auth-creds-sec .invalid-input {
+  border-left: 4px solid red;
+}
+
+.error-messages {
+  margin-top: 40px;
+}
+
+.auth-creds-sec h5 {
+  text-align: center;
+  color: red;
+  font-style: italic;
+}
+
+.auth-creds-sec form button {
+  margin-top: 32px;
+  padding: 20px 40px 20px 40px;
+  font-size: 16px;
+  background-color: var(--bg-gradient-start);
+  color: white;
+  border: 0;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+.auth-creds-sec form button:focus {
+  transform: scale(1.1);
+}
+
+/******************************User Profile************************/
+.user-profile {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  background-image: linear-gradient(to bottom right, var(--bg-gradient-start), var(--bg-gradient-end));
+}
+
+.profile-box {
+  display: flex;
+  flex-direction: column;
+  flex-basis: 40%;
+  height: 90%;
+  background-color: white;
+  margin: auto;
+  border-radius: 20px;
+  padding: 10px;
+  align-items: center;
+}
+
+.profile-box h2 {
+  text-align: center;
+  color: grey;
+  margin-top: 4px;
+}
+
+.profile-box img {
+  align-self: center;
+  width: 100px;
+  height: 100px;
+  margin-top: 20px;
+  border-radius: 50px;
+  box-shadow: 0px 0px 10px var(--bg-gradient-start);
+}
+
+
+.profile-box > button {
+  margin-top: 20px;
+  align-self: center;
+  padding: 10px 20px 10px 20px;
+  font-size: 12px;
+  background-color: var(--bg-gradient-start);
+  color: white;
+  border: 0;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+.profile-box form {
+  margin-top: 20px;
+}
+
+.profile-box form label {
+  display: block;
+  margin-top: 20px;
+  font-size: 28px;
+  color: gray;
+  font-weight: 600;
+  font-style: italic;
+  text-align: center;
+}
+
+.profile-box form input {
+  display: block;
+  padding: 8px;
+  margin-top: 4px;
+  border: 1px solid grey;
+  border-radius: 10px;
+  font-size: 20px;
+}
+
+.profile-box input:focus{
+  border: 0px;
+  border-left: 4px solid var(--bg-gradient-start);
+  border-top: 1px solid grey;
+  border-right: 1px solid grey;
+  border-bottom: 1px solid grey;
+}
+
+.profile-box form > div {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.profile-box form select {
+  font-size: 16px;
+  border: 2px solid grey;
+}
+
+.profile-box form select:focus {
+  border: 2px solid var(--bg-gradient-start);
+}
+
+.profile-box form > button {
+  display: block;
+  width: 80%;
+  margin: auto;
+  margin-top: 40px;
+  padding: 20px 40px 20px 40px;
+  font-size: 12px;
+  background-color: var(--bg-gradient-start);
+  color: white;
+  border: 0;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+.profile-box button:hover {
+  transform: scale(1.1);
+}
+
+.loading-spinner {
+  margin-top: 5px;
+  width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  border-top: 3px solid #7F00FF;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% {transform: rotate(0deg);}
+  100% {transform: rotate(1360deg);}
+}
+
+/******************************New Poll************************/
+.new-poll {
+  width: 100%;
+  height: 100%;
+  background-image: linear-gradient(to bottom right, var(--bg-gradient-start), var(--bg-gradient-end));
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.new-poll-box {
+  width: 50%;
+  height: 60%;
+  margin: auto;
+  background-color: white;
+  color: grey;
+  border-radius: 20px;
+  padding: 1%;
+  overflow-y: auto;
+}
+
+.new-poll-box form {
+  margin-top: 20px;
+}
+
+.new-poll-box input {
+  display: block;
+  padding: 8px;
+  margin-top: 4px;
+  border: 1px solid grey;
+  border-radius: 10px;
+  font-size: 20px;
+  width: 100%; 
+}
+
+.new-poll-box form > button {
+  width: 100%;
+  margin-top: 20px;
+  padding: 10px 0 10px 0;
+  background-color: var(--bg-gradient-start);
+  color: white;
+  font-size: 20px;
+  border: 0;
+  border-radius: 10px;
+}
+
+.new-poll-box form > button:hover {
+  transform: scaleY(1.1);
+}
+
+.new-poll-option {
+  display: flex;
+}
+
+.new-poll-option > button {
+  flex-basis: 10%;
+  flex-grow: 1;
+  border: 0;
+  background-color: transparent;
+}
+
+.new-poll-option > button:hover {
+  transform: scale(1.1);
+}
+
+#new-option-btn-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+#new-option-btn {
+  border-radius: 50%;
+  padding: 4px;
+}
+
+#new-option-btn:hover {
+  transform: scale(1.1);
+}
+
+.box-title-bar {
+  display: flex;
+}
+
+.box-title-bar > button {
+  flex-basis: 10%;
+  flex-grow: 1;
+  background-color: var(--bg-gradient-start);
+  color: white;
+  border: 0;
+}
+
+.box-title-bar > h1 {
+  flex-basis: 80%;
+  flex-grow: 2;
+  text-align: center;
+}
+
+.box-title-bar > div {
+  flex-basis: 10%;
+  flex-grow: 1;
+}
+
+/******************************Responsive Design************************/
+@media screen and (max-width: 750px) {
+    .auth-anim-sec {
+      display: none;
+    }
+
+    .auth-box {
+      width: 100%;
+    }
+
+    .auth-creds-sec input {
+      padding-left: 2px;
+      padding-right: 2px;
+    }
+
+    .profile-box h2 {
+      margin-top: 15px;
+    }
 }
