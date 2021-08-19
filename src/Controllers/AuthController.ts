@@ -66,13 +66,14 @@ async function createUserAccount(req : Request, resp : Response) : Promise<void>
             userDetailsCollection = await mongodb.db().collection("UserDetails");
 
         //Creating the user details document
-        const userDetails : {username:string,bday:number,bmonth:number,byear:number,followers:number,following:number} = {
+        const userDetails : {username:string,bday:number,bmonth:number,byear:number,followers:number,following:number,votes:{id:ObjectId,voteId:number}[]} = {
             username: "",
             bday: 1,
             bmonth: 0,
             byear: 2001,
             followers: 0,
-            following: 0
+            following: 0,
+            votes: []
         };
         res = await userDetailsCollection.insertOne(userDetails);
         if(!res)
