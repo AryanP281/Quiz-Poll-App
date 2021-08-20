@@ -2,13 +2,12 @@
 /******************************Imports**************************** */
 import {apiBaseUrl} from "../Config/Config";
 import { useSelector, useDispatch } from "react-redux";
-import {setUserDetails} from "../Redux/Slices/UserDetailsSlice";
+import {setUserDetails, setProfilePicture} from "../Redux/Slices/UserDetailsSlice";
 import { useEffect, useState } from "react";
 import { useHistory } from "react-router-dom";
 
 
 /******************************Variables**************************** */
-const url = "https://t4.ftcdn.net/jpg/02/14/74/61/360_F_214746128_31JkeaP6rU0NzzzdFC4khGkmqc8noe6h.jpg";
 const getUserDetailsApiUrl = `${apiBaseUrl}/users/profile`; //The api url to get the user profile details
 const editUserDetailsApiUrl = `${apiBaseUrl}/users/editprofile`; //The api url for editing the user profile details
 
@@ -21,12 +20,16 @@ function UserProfile()
 
     const [days, setDays] = useState(getDaysInMonth(userDetails.bdate.month, userDetails.bdate.year)); //The date state to ensure the proper number of day are displayed in the spinner
     const [showLoadingSpinner, setShowLoadingSpinner] = useState(false); //Indicates whether the loading spinner should be displayed
+    const [profilePicUrl, setProfilePicUrl] = useState(userDetails.profilePic); //The profile pic url
 
     //Loading the user details
     useEffect(() => {
         if(!userDetails.initialized)
             loadUserData(dispatch)
     },[]);
+
+    //Updating the user profile picture
+    useEffect(() => setProfilePicUrl(userDetails.profilePic), [userDetails.profilePic]);
 
     //Creating function to display months of the year
     const getMonths = () => {
@@ -61,9 +64,8 @@ function UserProfile()
                     <div />
                 </div>
                 
-                <img src={url} alt="pic"/>
-
-                <button>Change profile picture</button>
+                <img className="user-pic" src={profilePicUrl} alt="pic"/>
+                <input type="file" id="profile_pic" accept="image/jpeg" onChange={(e) => setUserProfilePic(setProfilePicUrl, e)}/>
                 
                 <form onSubmit={(event) => {
                     event.preventDefault();
@@ -129,13 +131,23 @@ function loadUserData(dispatch)
             throw Error(data.code);
         
         //Setting the user details
-        dispatch(setUserDetails({username: data.user.username, bdate: {day: data.user.bday, month: data.user.bmonth, year: data.user.byear}, followers: data.user.followers, following: data.user.following}));
+        dispatch(setUserDetails({username: data.user.username, bdate: {day: data.user.bday, month: data.user.bmonth, year: data.user.byear}, followers: data.user.followers, following: data.user.following, profilePicUrl : data.user.picUrl}));
     })
     .catch((err) => {
         console.log(err);
         alert("Failed to load user details");
     })
 
+}
+
+function setUserProfilePic(setProfilePicUrl, event)
+{
+    /*Sets the user profile picture */
+
+    //Getting the profile pic url
+    if(event.target.files && event.target.files[0]) //Checking if a file has been uploaded
+        setProfilePicUrl(URL.createObjectURL(event.target.files[0]));
+    
 }
 
 function updateUserData(oldDetails, dispatch, setShowLoadingSpinner)
@@ -152,28 +164,37 @@ function updateUserData(oldDetails, dispatch, setShowLoadingSpinner)
         bmonth: parseInt(document.getElementById("bmonth").value),
         byear: parseInt(document.getElementById("byear").value)
     };
-
+    //Adding the profile pic url
+    const picInput = document.getElementById("profile_pic");
+    console.log(picInput.files)
+    if(picInput.files && picInput.files[0])
+        userDetails.profilePic = picInput.files[0];
+    console.log(userDetails)
+    
     //Validating the user details
     if(validateUserDetails(userDetails))
     {
+        //Creating the form data
+        const formData = new FormData();
+        
         //Removing the unchanged details
-        if(oldDetails.username === userDetails.username)
-            delete userDetails.username;
-        if(oldDetails.bdate.day === userDetails.bday)
-            delete userDetails.bday;
-        if(oldDetails.bdate.month === userDetails.bmonth)
-            delete userDetails.bmonth;
-        if(oldDetails.bdate.year === userDetails.byear)
-            delete userDetails.byear;
-
+        if(oldDetails.username !== userDetails.username)
+            formData.append("username", userDetails.username);
+        if(oldDetails.bdate.day !== userDetails.bday)
+            formData.append("bday", userDetails.bday);
+        if(oldDetails.bdate.month !== userDetails.bmonth)
+            formData.append("bmonth", userDetails.bmonth);
+        if(oldDetails.bdate.year !== userDetails.byear)
+            formData.append("byear", userDetails.byear);
+        if(userDetails.profilePic)
+            formData.append("profilePic", userDetails.profilePic);
+        
+        
         //Sending request to update user details
         fetch(editUserDetailsApiUrl, {
             method: "PUT",
-            headers: {
-                "Content-Type": "application/json"
-            },
             credentials: "include",
-            body: JSON.stringify({userDetails: userDetails})
+            body: formData
         })
         .then((resp) => {
             if(resp.status !== 200)
@@ -193,14 +214,15 @@ function updateUserData(oldDetails, dispatch, setShowLoadingSpinner)
                     year: userDetails.byear ? userDetails.byear : oldDetails.bdate.year,
                 },
                 followers: oldDetails.followers,
-                following: oldDetails.following
+                following: oldDetails.following,
             };
             dispatch(setUserDetails(updatedDetails));
             setShowLoadingSpinner(false);
         })
         .catch((err) => {
             console.log(err);
-            alert("Failed to update user details");
+            alert(err);
+            setShowLoadingSpinner(false);
         })
     }
     else
@@ -217,3 +239,4 @@ function validateUserDetails(userDetails)
 
 /******************************Exports**************************** */
 export default UserProfile;
+export {loadUserData};

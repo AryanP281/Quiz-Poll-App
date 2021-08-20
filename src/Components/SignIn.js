@@ -140,7 +140,7 @@ function displayErrorMessages(errorWord)
     for(let i = 0; i < errorMessages.length; ++i)
     {
         if(errorWord & (1 << i))
-            errors.push((<h5 key={i}>{errorMessages[i]}</h5>));
+            errors.push((<h5 key={i} className="error-message">{errorMessages[i]}</h5>));
     }
 
     return errors;

@@ -2,18 +2,22 @@
 import {useState} from "react";
 import {FcDeleteRow, FcAddRow} from "react-icons/fc";
 import { useHistory } from "react-router-dom";
+import {apiBaseUrl} from "../Config/Config";
 
 /******************************Variables**************************** */
 let newOptionId = 0; //The id for new option. Its unique for each option
+const createNewPollApiUrl = `${apiBaseUrl}/content/createpoll`; //The api url to create new poll
+const errorMessages = ["Poll title cannot be empty", "Poll should have atleast one non-empty option", "Failed to create new poll"];
+let pollCreationSemaphore = false; //A semaphore to prevent multiple clicks of create poll button
 
 /******************************Components**************************** */
 function NewPoll()
 {
-    const [options, setOptions] = useState([]);
+    const [options, setOptions] = useState([]); //The poll options
+    const [resStatus, setResStatus] = useState([0,false]); //Result status. resStatus[0] = errorWord and resStatus[1] indicates whether to show loading spinner
     const history = useHistory();
 
     console.log("New Poll")
-    console.log(options)
 
     return(
         <div className="new-poll">
@@ -26,7 +30,7 @@ function NewPoll()
                 <form onSubmit={(event) => {
                     event.preventDefault();
                 }}>
-                    <input type="text" placeholder="Enter Question" />
+                    <input type="text" id="poll_title" placeholder="Enter Question" className={(resStatus[0] & 1) ? "invalid-input" : ""}/>
                     <div>
                         {options.map((option) => <NewPollOption key={option.id} option={option} options={options} setOptions={setOptions}/>)}
                     </div>
@@ -34,8 +38,21 @@ function NewPoll()
                         <button id="new-option-btn" onClick={() => addNewOption(options, setOptions)}> <FcAddRow size={40}/> </button>
                     </div>
 
-                    <button type="submit">Create Poll</button>
+                    <button type="submit" onClick={() => {
+                            console.log(pollCreationSemaphore)
+                            if(!pollCreationSemaphore)
+                            {
+                                pollCreationSemaphore = true;
+                                createNewPoll(options, setResStatus, history)
+                            }
+                        }}>Create Poll</button>
                 </form>
+
+                <div className="error-messages">
+                    {resStatus[1] && <div className="loading-spinner" style={{margin: "auto"}}/> }
+                    {(resStatus[0] !== 0) && getErrorMessages(resStatus[0])}
+                </div>
+
             </div>
         </div>
     );
@@ -81,6 +98,100 @@ function deleteOption(option, options, setOptions)
     });
 
     setOptions(newOptions);
+}
+
+function createNewPoll(opts, setResStaus, history)
+{
+    /*Creates the new poll */
+
+    //Creating the new poll object
+    const newPoll = {
+        name: document.getElementById("poll_title").value.trim(),
+        options : (() => {
+            const nonEmptyOptions = [];
+            let optionTxt;
+            opts.forEach((option) => {
+                optionTxt = option.txt.trim();
+                if(optionTxt.length !== 0)
+                    nonEmptyOptions.push(optionTxt);
+            });
+            return nonEmptyOptions;
+        })()
+    }; 
+    console.log(newPoll)
+
+    //Checking if entered details are valid
+    const errorWord = validatePollDetails(newPoll);
+    if(errorWord === 0)
+    {
+        //Displaying loading spinner
+        setResStaus([0, true]);
+
+        //Sending request to create new poll
+        fetch(createNewPollApiUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type" : "application/json"
+            },
+            credentials: "include",
+            body: JSON.stringify({poll:newPoll})
+        })
+        .then((resp) => {
+            if(resp.status !== 200)
+                throw Error(resp.status);
+            return resp.json();
+        })
+        .then((data) => {
+            if(!data.success)
+            {
+                setResStaus([3, false]);
+                return;
+            }
+            else
+            {
+               //Redirecting to poll page
+                history.replace(`/poll/${data.pollId}`);
+                return;
+            }
+        })
+        .catch((err) => {
+            console.log(err);
+            setResStaus([4, false]);
+        })
+        .finally(() => pollCreationSemaphore = false)
+    }
+    else
+        setResStaus([errorWord, false]);
+
+}
+
+function validatePollDetails(poll)
+{
+    /*Checks if the entered poll details are valid */
+
+    let errorWord = 0; //The error word to indicate the errors
+    
+    //Checking poll title
+    errorWord |= (poll.name.length === 0);
+
+    //Checking the poll options
+    errorWord |= (poll.options.length === 0) << 1;
+
+    return errorWord;
+}
+
+function getErrorMessages(errorWord)
+{
+    /*Returns the error messages to be displayed */
+
+    const errors = [];
+    for(let i = 0; i < errorMessages.length; ++i)
+    {
+        if(errorWord & (1 << i))
+            errors.push(<h5 key={i} className="error-message">{errorMessages[i]}</h5>);
+    }
+
+    return errors;
 }
 
 /******************************Exports**************************** */

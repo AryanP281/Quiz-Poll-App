@@ -5,6 +5,7 @@ import SignUp from "./Components/Signup";
 import UserProfile from "./Components/UserProfile";
 import Home from "./Components/Home";
 import NewPoll from "./Components/NewPoll";
+import Poll from "./Components/Poll";
 
 function App() 
 {
@@ -33,6 +34,10 @@ function App()
 
           <Route exact path="/newpoll">
             <NewPoll />
+          </Route>
+
+          <Route path="/poll/:pollId">
+            <Poll />
           </Route>
 
         </Switch>

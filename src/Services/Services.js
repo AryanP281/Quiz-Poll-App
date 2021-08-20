@@ -18,7 +18,7 @@ function getCookies()
     let cookieComps = [];
     cookieStrs.forEach((cookieStr) => {
         cookieComps = cookieStr.split('=');
-        cookies.set(cookieComps[0], cookieComps[1]);
+        cookies.set(cookieComps[0].trim(), cookieComps[1].trim());
     });
 
     return cookies;
