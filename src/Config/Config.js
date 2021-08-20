@@ -2,7 +2,7 @@
 /*******************************Imports************************** */
 
 /*******************************Variables************************** */
-const apiBaseUrl = "http://192.168.1.5:5000";
+const apiBaseUrl = "https://quiz-poll-app.herokuapp.com";
 
 /*******************************Exports************************** */
 export {apiBaseUrl};

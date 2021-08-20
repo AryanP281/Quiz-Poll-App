@@ -10,6 +10,7 @@ import {getCookies} from "../Services/Services";
 
 /****************************Variables************************/
 const getUserPollsApiUrl = `${apiBaseUrl}/content/userpolls`; //The api url to get the polls created by the current user 
+const signOutApiUrl = `${apiBaseUrl}/auth/signout`; //The api url to sign out the user
 
 /****************************Component************************/
 function Home()
@@ -61,6 +62,7 @@ function SideBar({history})
         <div className="side-nav-bar">
             <button onClick={() => history.push("/newpoll")}>Create New Poll</button>
             <button onClick={() => history.push("/editprofile")}>Edit Profile</button>
+            <button onClick={() => signoutUser(history)}>Log out</button>
         </div>
     );
 }
@@ -143,6 +145,25 @@ function loadUserPolls(dispatch)
     .catch((err) => {
         console.log(err);
     })
+}
+
+function signoutUser(history)
+{
+    /*Signs out the user */
+
+    fetch(signOutApiUrl, {
+        method: "GET",
+        credentials: "include"
+    })
+    .then((resp) => {
+        if(resp.status !== 200)
+            throw Error(resp);
+        history.replace("/signin");
+    })
+    .catch((err) => {
+        console.log(err);
+        alert("Failed to sign out. Try again");
+    });
 }
 
 /****************************Exports*********************** */
