@@ -4,9 +4,8 @@ import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useHistory } from "react-router-dom";
 import {loadUserData} from "../Components/UserProfile";
-import { apiBaseUrl } from "../Config/Config";
-import { setPolls } from "../Redux/Slices/UserDetailsSlice";
-import {getCookies} from "../Services/Services";
+import { apiBaseUrl, authStatus } from "../Config/Config";
+import { setAuthStatus, setPolls } from "../Redux/Slices/UserDetailsSlice";
 
 /****************************Variables************************/
 const getUserPollsApiUrl = `${apiBaseUrl}/content/userpolls`; //The api url to get the polls created by the current user 
@@ -21,13 +20,16 @@ function Home()
     const history = useHistory();
 
     //Checking if the user has signed in
-    const cookies = getCookies();
-    if(!cookies.has("auth"))
+    const userAuthStatus = sessionStorage.getItem("authStatus");
+    if(userAuthStatus === null || userAuthStatus === authStatus.notLogged)
+    {
         history.replace("/signin"); //Redirecting to signin page
+    }
 
     //Loading user data
     useEffect(() => {
-        if(cookies.has("auth"))
+        console.log()
+        if(userAuthStatus === authStatus.logged)
         {
             //Loading the user details
             if(!userDetails.initialized)
@@ -158,6 +160,7 @@ function signoutUser(history)
     .then((resp) => {
         if(resp.status !== 200)
             throw Error(resp);
+        sessionStorage.setItem("authStatus", authStatus.notLogged);
         history.replace("/signin");
     })
     .catch((err) => {

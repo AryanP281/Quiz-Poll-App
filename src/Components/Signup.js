@@ -2,7 +2,7 @@
 /**********************************Imports*******************************/
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import {apiBaseUrl} from "../Config/Config";
+import {apiBaseUrl, authStatus} from "../Config/Config";
 import { emailRegex, getCookies } from "../Services/Services";
 import { useHistory } from "react-router";
 
@@ -17,12 +17,14 @@ function SignUp()
     const history = useHistory();
 
     //Checking if the user is already signed in
-    const setCookies = getCookies();
-    if(setCookies.has("auth"))
+    const userAuthStatus = sessionStorage.getItem("authStatus");
+    if(userAuthStatus !== null)
     {
-        //Redirecting to home page
-        history.replace("/");
-        return null;
+        if(userAuthStatus === authStatus.notLogged)
+        {
+            history.replace("/");
+            return null;
+        }
     }
 
     return(
@@ -103,6 +105,9 @@ function createUserAccount(setErrorWord, history)
         }
         else
         {
+            //Updating the user auth status
+            sessionStorage.authStatus("authStatus", authStatus.logged);
+
             //Redirecting to edit profile page
             history.replace("/editprofile");
         }

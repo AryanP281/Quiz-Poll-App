@@ -58,5 +58,5 @@ function setUserPolls(state, action)
 }
 
 /**********************Exports****************** */
-export const {setUserDetails, setProfilePicture, setPolls} = userDetailsSlice.actions;
+export const {setUserDetails, setProfilePicture, setPolls, setAuthStatus} = userDetailsSlice.actions;
 export default userDetailsSlice.reducer;

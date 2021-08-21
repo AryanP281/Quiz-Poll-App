@@ -2,8 +2,10 @@
 /*************************Imports*********************** */
 import { useState } from "react";
 import { emailRegex, getCookies } from "../Services/Services";
-import {apiBaseUrl} from "../Config/Config";
+import {apiBaseUrl, authStatus} from "../Config/Config";
 import { useHistory, Link } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { setAuthStatus } from "../Redux/Slices/UserDetailsSlice";
 
 /*************************Variables*********************** */
 const getTokenApiUrl = `${apiBaseUrl}/auth/signin`; //The api url to get user access token
@@ -16,12 +18,14 @@ function SignIn()
     const history = useHistory();
 
     //Checking if the user is already signed in
-    const setCookies = getCookies();
-    if(setCookies.has("auth"))
+    const userAuthStatus = sessionStorage.getItem("authStatus"); //Getting the user auth status
+    if(userAuthStatus !== null)
     {
-        //Redirecting to home page
-        history.replace("/");
-        return null;
+        if(userAuthStatus === authStatus.logged)
+        {
+            history.replace("/"); //Redirecting to home page
+            return null;
+        }
     }
 
     console.log("signin")
@@ -105,6 +109,9 @@ function loginUser(setErrorWord, history)
         }
         else
         {
+            //Updating the user auth status
+            sessionStorage.setItem("authStatus", authStatus.logged);
+
             //Redirecting to home page
             history.replace("/");
         }
