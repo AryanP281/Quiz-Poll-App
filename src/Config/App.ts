@@ -51,5 +51,7 @@ const multerUploader : multer.Multer = multer({
     }
 });
 
+const isDebugMode = (process.env.DEBUG === "true");
+
 /********************************Exports*********************** */
-export {responseCodes, JWT_SECRET, mongoDbConfig, firebaseConfig, multerUploader};
+export {responseCodes, JWT_SECRET, mongoDbConfig, firebaseConfig, multerUploader, isDebugMode};

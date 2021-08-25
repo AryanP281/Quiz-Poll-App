@@ -5,8 +5,6 @@ import { responseCodes } from "../Config/App";
 import {mongodb} from "../Config/Mongo";
 
 /**************************Variables**********************/
-let pollCollection : Collection | null = null; //Reference to the collection containing the poll documents
-let userCollection : Collection | null = null; //Reference to the collection containing poll documents
 
 
 /**************************Controllers**********************/
@@ -24,8 +22,7 @@ async function createPoll(req : Request, resp : Response) : Promise<void>
         }
 
         //Getting the poll collection
-        if(!pollCollection)
-            pollCollection = await mongodb.db().collection("Polls");
+        const pollCollection = await mongodb.db().collection("Polls");
 
         //Creating the poll object
         const currDate : Date = new Date(); //Getting the current date
@@ -62,8 +59,7 @@ async function getPoll(req : Request, resp : Response) : Promise<void>
         }
 
         //Getting the polls collection
-        if(!pollCollection)
-            pollCollection = await mongodb.db().collection("Polls");
+        const pollCollection = await mongodb.db().collection("Polls");
 
         //Getting the poll document
         const pollDocument : Document | undefined = await pollCollection.findOne({_id: new ObjectId(req.params.pollId)}, {projection:{_id:0}});
@@ -74,7 +70,9 @@ async function getPoll(req : Request, resp : Response) : Promise<void>
         }
 
         //Checking if the user has already voted in the poll
-        const voteId : number | null = await checkUserHasVoted(req.body.userId, req.params.pollId);
+        let voteId : number | null = null;
+        if(req.body.userId)
+            voteId = await checkUserHasVoted(req.body.userId, req.params.pollId);
         
         //Responding with poll data
         resp.status(200).json({success: true, poll: pollDocument, userVoted: (voteId !== null ? voteId : -1)});
@@ -102,15 +100,13 @@ async function addVoteToPoll(req : Request, resp : Response) : Promise<void>
         }
 
         //Getting the poll collection
-        if(!pollCollection)
-            pollCollection = await mongodb.db().collection("Polls");
+        const pollCollection = await mongodb.db().collection("Polls");
 
         //Updating poll document
         await pollCollection.updateOne({_id: new ObjectId(voteDetails.pollId), "options.id" : voteDetails.voteId}, {$inc: {"options.$.votes": 1}});
         
         //Getting the user collection
-        if(!userCollection)
-            userCollection = await mongodb.db().collection("UserDetails");
+        const userCollection = await mongodb.db().collection("UserDetails");
 
         //Updating the user votes list
         await userCollection.updateOne({_id: new ObjectId(req.body.userId)}, {$push: {votes: {id: new ObjectId(voteDetails.pollId), voteId: voteDetails.voteId}}});
@@ -131,8 +127,7 @@ async function getUserPolls(req : Request, resp : Response) : Promise<void>
     try
     {
         //Getting the polls collection
-        if(!pollCollection)
-            pollCollection = await mongodb.db().collection("Polls");
+        const pollCollection = await mongodb.db().collection("Polls");
 
         //Getting the documents for polls created by the user
         const userPoll = await pollCollection.find({creatorId: new ObjectId(req.body.userId)}, {projection: {_id:true,name:true,options:true}}).toArray();
@@ -152,14 +147,42 @@ async function getUserPolls(req : Request, resp : Response) : Promise<void>
     }
 }
 
+async function addGuestVote(req: Request, resp: Response) : Promise<void> 
+{
+    /*Adds a guest users vote to the poll */
+
+    try 
+    {
+        //Getting the vote details
+        const voteDetails : {pollId: string, voteId: number} | undefined = {pollId: req.body.pollId, voteId: req.body.voteId};
+        if(!voteDetails || !voteDetails.pollId || voteDetails.pollId.length != 24 || voteDetails.voteId === undefined)
+        {
+            resp.status(200).json({success:false, code: responseCodes.content_not_found});
+            return;
+        }
+
+        //Getting the polls collection
+        const pollCollection : Collection = await mongodb.db().collection("Polls");
+
+        //Updating the poll votes
+        await pollCollection.updateOne({_id: new ObjectId(voteDetails.pollId), "options.id": voteDetails.voteId}, {$inc: {"options.$.votes": 1}});
+
+        resp.status(200).json({success:true, code: responseCodes.success});
+    }
+    catch(err)
+    {
+        console.log(err);
+        resp.sendStatus(500);
+    }
+}
+
 /**************************Functions**********************/
 async function checkUserHasVoted(userId: string, pollId: string) : Promise<number | null>
 {
     /*Checks and whether the user has already voted in the given poll and returns the vote id*/
 
     //Getting the user documents collection
-    if(!userCollection)
-        userCollection = await mongodb.db().collection("UserDetails");
+    const userCollection = await mongodb.db().collection("UserDetails");
 
     //Getting the user votes list
     const userVotes : {id:ObjectId, voteId:number}[] = (await userCollection.findOne({_id: new ObjectId(userId)}))!.votes;
@@ -187,4 +210,4 @@ function getPollVotesCount(pollOptions : {id:number,txt:string,votes:number}[]) 
 
 
 /**************************Exports**********************/
-export {createPoll, getPoll, addVoteToPoll, getUserPolls};
+export {createPoll, getPoll, addVoteToPoll, getUserPolls, addGuestVote};

@@ -7,7 +7,6 @@ import {mongodb} from "../Config/Mongo";
 import {profilePicturesStorageRef} from "../Config/Firebase";
 
 /*************************Variables********************** */
-let userDetailsCollection : Collection | null = null; //The collection containing the user details
 
 /*************************Functions********************** */
 async function editUserDetails(req : Request, resp : Response) : Promise<void> 
@@ -40,8 +39,7 @@ async function editUserDetails(req : Request, resp : Response) : Promise<void>
         }
             
         //Getting the user details collection
-        if(!userDetailsCollection)
-            userDetailsCollection = await mongodb.db().collection("UserDetails");
+        const userDetailsCollection = await mongodb.db().collection("UserDetails");
 
         //Creating the set object containing the values to be updates
         const valsToUpdate : [string,any][] = Object.entries(req.body);
@@ -71,8 +69,7 @@ async function getUserProfile(req : Request, resp : Response) : Promise<void>
     try
     {
         //Getting the user details collection
-        if(!userDetailsCollection)
-            userDetailsCollection = await mongodb.db().collection("UserDetails");
+        const userDetailsCollection = await mongodb.db().collection("UserDetails");
 
         //Getting the user details document
         const userDoc : Document | undefined = await userDetailsCollection.findOne({_id : new ObjectId(req.body.userId)}, {projection : {_id : 0}});

@@ -3,16 +3,14 @@
 import {Request, Response} from "express"
 import {mongodb} from "../Config/Mongo"
 import {Collection, Document, ObjectId} from "mongodb"
-import {responseCodes, JWT_SECRET} from "../Config/App"
+import {responseCodes, JWT_SECRET, isDebugMode} from "../Config/App"
 import {compareHash, hash} from "../Services/Crypto"
 import jwt from "jsonwebtoken"
 
 /********************************Variables*********************** */
-let userAccountsCollection : Collection | null = null; //The collection containing the user account details
-let userDetailsCollection : Collection | null = null; //The collection containing the user details
 
 /********************************Helper Functions*********************** */
-async function checkEmailExists(email : string) : Promise<boolean>
+async function checkEmailExists(email : string, userAccountsCollection : Collection) : Promise<boolean>
 {
     /*Checks if a user with the given email already exists */
 
@@ -36,11 +34,10 @@ async function createUserAccount(req : Request, resp : Response) : Promise<void>
         }
 
         //Getting the accounts collection
-        if(!userAccountsCollection)
-            userAccountsCollection = await mongodb.db().collection("UserCreds");
+        const userAccountsCollection = await mongodb.db().collection("UserCreds");
 
         //Checking if email id is already registered
-        if(await checkEmailExists(req.body.user.email))
+        if(await checkEmailExists(req.body.user.email, userAccountsCollection))
         {
             resp.status(200).json({success: false, code : responseCodes.email_already_registered});
             return;
@@ -62,8 +59,7 @@ async function createUserAccount(req : Request, resp : Response) : Promise<void>
         const userCredsDocId : ObjectId = res.insertedId;
 
         //Getting the user details document
-        if(!userDetailsCollection)
-            userDetailsCollection = await mongodb.db().collection("UserDetails");
+        const userDetailsCollection = await mongodb.db().collection("UserDetails");
 
         //Creating the user details document
         const userDetails : {username:string,bday:number,bmonth:number,byear:number,followers:number,following:number,votes:{id:ObjectId,voteId:number}[]} = {
@@ -87,8 +83,7 @@ async function createUserAccount(req : Request, resp : Response) : Promise<void>
 
         //Setting the user cookies
         const userToken : string = await jwt.sign(userDocsId.toString(), JWT_SECRET!); //Creating the jwt token for future authoriazations
-        resp.cookie("userToken", userToken, {httpOnly: true});
-        resp.cookie("auth", true, {httpOnly: false});
+        resp.cookie("userToken", userToken, {httpOnly: true, sameSite: isDebugMode ? "lax" : "none", secure: !isDebugMode});
 
         resp.status(200).json({success : true, code : responseCodes.success});
     }
@@ -117,8 +112,7 @@ async function authenticateUser(req : Request, resp : Response) : Promise<void>
         }
 
         //Getting the user accounts collection
-        if(!userAccountsCollection)
-            userAccountsCollection = await mongodb.db().collection("UserCreds");
+        const userAccountsCollection = await mongodb.db().collection("UserCreds");
 
         //Getting the user credentials document
         const userCredsDocument : Document | undefined = await userAccountsCollection.findOne({email : userDetails.email});
@@ -137,8 +131,7 @@ async function authenticateUser(req : Request, resp : Response) : Promise<void>
         }
 
         //Getting the user details collection
-        if(!userDetailsCollection)
-            userDetailsCollection = await mongodb.db().collection("UserDetails");
+        const userDetailsCollection = await mongodb.db().collection("UserDetails");
 
         //Getting the user id
         const userId : string | undefined = (await userDetailsCollection.findOne({_id : userCredsDocument.user_fk}))?._id.toString();
@@ -147,8 +140,7 @@ async function authenticateUser(req : Request, resp : Response) : Promise<void>
 
         //Setting cookies
         const userToken : string = await jwt.sign(userId, JWT_SECRET!);
-        resp.cookie("userToken", userToken, {httpOnly: true});
-        resp.cookie("auth", true, {httpOnly: false});
+        resp.cookie("userToken", userToken, {httpOnly: true, sameSite: isDebugMode ? "lax" : "none", secure: !isDebugMode});
 
         resp.status(200).json({success: true, code : responseCodes.success});
     }
