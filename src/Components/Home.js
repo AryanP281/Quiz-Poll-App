@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useHistory } from "react-router-dom";
 import {loadUserData} from "../Components/UserProfile";
 import { apiBaseUrl, authStatus } from "../Config/Config";
-import { setAuthStatus, setPolls } from "../Redux/Slices/UserDetailsSlice";
+import { setPolls } from "../Redux/Slices/UserDetailsSlice";
 
 /****************************Variables************************/
 const getUserPollsApiUrl = `${apiBaseUrl}/content/userpolls`; //The api url to get the polls created by the current user 
@@ -52,6 +52,7 @@ function Home()
                         {userDetails.polls && <UserPollsTable userPolls={userDetails.polls} history={history}/>}
                     </ContentList>
                 </div>
+                <BottomBar />
             </div>
         </div>
     );
@@ -65,6 +66,17 @@ function SideBar({history})
             <button onClick={() => history.push("/newpoll")}>Create New Poll</button>
             <button onClick={() => history.push("/editprofile")}>Edit Profile</button>
             <button onClick={() => signoutUser(history)}>Log out</button>
+        </div>
+    );
+}
+
+function BottomBar()
+{
+    /*The bottom bar component which replaces the side nav bar on smaller screens */
+
+    return (
+        <div className="bottom-bar">
+        
         </div>
     );
 }

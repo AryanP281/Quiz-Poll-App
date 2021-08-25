@@ -1,8 +1,8 @@
 
 /******************************Imports**************************** */
-import {apiBaseUrl} from "../Config/Config";
+import {apiBaseUrl, authStatus} from "../Config/Config";
 import { useSelector, useDispatch } from "react-redux";
-import {setUserDetails, setProfilePicture} from "../Redux/Slices/UserDetailsSlice";
+import {setUserDetails} from "../Redux/Slices/UserDetailsSlice";
 import { useEffect, useState } from "react";
 import { useHistory } from "react-router-dom";
 
@@ -22,9 +22,16 @@ function UserProfile()
     const [showLoadingSpinner, setShowLoadingSpinner] = useState(false); //Indicates whether the loading spinner should be displayed
     const [profilePicUrl, setProfilePicUrl] = useState(userDetails.profilePic); //The profile pic url
 
+    //Checking if the user is logged in
+    const userAuthStatus = sessionStorage.getItem("authStatus");
+    if(userAuthStatus === null || userAuthStatus !== authStatus.logged)
+    {
+        history.replace("/signin");
+    }
+
     //Loading the user details
     useEffect(() => {
-        if(!userDetails.initialized)
+        if(!userDetails.initialized && userAuthStatus === authStatus.logged)
             loadUserData(dispatch)
     },[]);
 

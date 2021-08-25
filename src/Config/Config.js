@@ -2,7 +2,7 @@
 /*******************************Imports************************** */
 
 /*******************************Variables************************** */
-const apiBaseUrl = "https://quiz-poll-app.herokuapp.com";
+const apiBaseUrl = "http://192.168.1.5:5000" //"https://quiz-poll-app.herokuapp.com";
 const authStatus = {
     notLogged: "0",
     logged: "1",

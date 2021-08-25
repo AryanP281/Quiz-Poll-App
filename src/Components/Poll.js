@@ -2,12 +2,12 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import { useHistory } from "react-router-dom";
-import {apiBaseUrl} from "../Config/Config";
-import {getCookies} from "../Services/Services";
+import {apiBaseUrl, authStatus} from "../Config/Config";
 
 /******************************Variables**************************** */
 const getPollApiBaseUrl = `${apiBaseUrl}/content/poll`; //The base url for the get poll request
 const addVoteApiUrl = `${apiBaseUrl}/content/poll/vote`; //The api url to add the user's vote in the poll
+const addGuestVoteApiUrl = `${addVoteApiUrl}/guest`; //The api url to add the guest vote
 let pollId; //The id of the current poll
 let voted = undefined; //Indicates if the user has voted in the given poll
 
@@ -18,8 +18,16 @@ function Poll()
     const [poll, setPoll] = useState(null); //The poll data to be displayed
     const history = useHistory();
 
+    //Getting the user auth status
+    const userAuthStatus = (sessionStorage.getItem("authStatus") === null) ? authStatus.guest : sessionStorage.getItem("authStatus");
+
     //Getting the poll details
-    useEffect(() => getPoll(pollId, setPoll), []);
+    useEffect(() => {
+        getPoll(pollId, setPoll); //Getting the poll details
+    }, []);
+
+    //Checking if the user is a guest and has already voted in the poll
+    useEffect(() => checkIfGuestUserHasVoted(userAuthStatus), [voted]);
 
     console.log("Poll")
 
@@ -27,7 +35,8 @@ function Poll()
         <div className="poll">
             <div className="poll-box">
                 <div className="box-title-bar" style={{flexBasis: "10%", flexGrow: 1}}>
-                    <button onClick={() => history.push("/")}>Home</button>
+                    {userAuthStatus === authStatus.logged && <button onClick={() => history.push("/")}>Home</button>}
+                    {userAuthStatus === authStatus.guest && <button onClick={() => history.push("/signin")}>Sign In</button>}
                     <h1>{(poll && poll.name.length) ? poll.name : "Loading"}</h1>
                     <button onClick={copyShareableLink}>Share</button>
                 </div>
@@ -40,7 +49,7 @@ function Poll()
                     {poll && poll.options.map((option) => {
                         return(
                             <button key={option.id} class="poll-option-btn" disabled={voted} onClick={() => {
-                                addUserVote(option.id,poll, setPoll);
+                                addUserVote(option.id,userAuthStatus,poll, setPoll);
                             }} style={{backgroundColor: (voted !== undefined ? (option.id === voted ? "var(--bg-gradient-end)" : "grey") : "")}}>{option.txt}</button>
                         );
                     })}
@@ -130,12 +139,14 @@ function getPoll(pollId, setPoll)
 
 }
 
-function addUserVote(voteId, polls, setPolls)
+function addUserVote(voteId, userAuthStatus, polls, setPolls)
 {
     /*Adds the user's vote to the poll */
 
+    const requestUrl = userAuthStatus === authStatus.logged ? addVoteApiUrl : addGuestVoteApiUrl;
+
     //Sending request to vote
-    fetch(addVoteApiUrl, {
+    fetch(requestUrl, {
         method: "PUT",
         headers: {
             "Content-Type": "application/json"
@@ -153,6 +164,10 @@ function addUserVote(voteId, polls, setPolls)
             throw Error(data.code);
 
         voted = voteId;
+
+        //Updating list of voted polls for guest user
+        if(userAuthStatus === authStatus.guest)
+            updateGuestVotesList(pollId, voteId);
         
         //Updating the polls
         const newPoll = {...polls};
@@ -182,6 +197,39 @@ function copyShareableLink()
     document.execCommand('copy');
     document.body.removeChild(el);
 
+}
+
+function checkIfGuestUserHasVoted(userAuthStatus)
+{
+    /*Checks if the user is a guest and has already voted in the poll*/
+
+    if(userAuthStatus === authStatus.guest)
+    {
+        let votedPolls = sessionStorage.getItem("guestVotes"); //Getting the polls in which the guest has voted
+        if(votedPolls !== null)
+        {
+            votedPolls = JSON.parse(votedPolls);
+            if(votedPolls[pollId])
+                voted = votedPolls[pollId];
+        }
+    }
+}
+
+function updateGuestVotesList(pollId, voteId)
+{
+    /*Updates the list of polls in which the guest user has voted */
+
+    let guestVotes = sessionStorage.getItem("guestVotes");
+    if(guestVotes === null)
+        guestVotes = {};
+    else
+        guestVotes = JSON.parse(guestVotes);
+
+    //Adding the new vote to the votes object
+    guestVotes[pollId] = voteId;
+
+    //Saving the updated list
+    sessionStorage.setItem("guestVotes", JSON.stringify(guestVotes));
 }
 
 /******************************Exports**************************** */

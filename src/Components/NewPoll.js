@@ -2,7 +2,7 @@
 import {useState} from "react";
 import {FcDeleteRow, FcAddRow} from "react-icons/fc";
 import { useHistory } from "react-router-dom";
-import {apiBaseUrl} from "../Config/Config";
+import {apiBaseUrl, authStatus} from "../Config/Config";
 
 /******************************Variables**************************** */
 let newOptionId = 0; //The id for new option. Its unique for each option
@@ -16,6 +16,14 @@ function NewPoll()
     const [options, setOptions] = useState([]); //The poll options
     const [resStatus, setResStatus] = useState([0,false]); //Result status. resStatus[0] = errorWord and resStatus[1] indicates whether to show loading spinner
     const history = useHistory();
+
+    //Checking if the user is logged in
+    const userAuthStatus = sessionStorage.getItem("authStatus");
+    if(userAuthStatus === null || userAuthStatus !== authStatus.logged)
+    {
+        history.replace("/signin");
+        return null
+    }
 
     console.log("New Poll")
 
