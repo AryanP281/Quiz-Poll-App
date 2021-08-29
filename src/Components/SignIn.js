@@ -1,11 +1,9 @@
 
 /*************************Imports*********************** */
 import { useState } from "react";
-import { emailRegex, getCookies } from "../Services/Services";
+import { emailRegex} from "../Services/Services";
 import {apiBaseUrl, authStatus} from "../Config/Config";
 import { useHistory, Link } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-import { setAuthStatus } from "../Redux/Slices/UserDetailsSlice";
 
 /*************************Variables*********************** */
 const getTokenApiUrl = `${apiBaseUrl}/auth/signin`; //The api url to get user access token
@@ -54,9 +52,25 @@ function SignIn()
                 </div>
 
                 <div className="auth-anim-sec">
-                
+                    <PollAnimation />
                 </div>
 
+            </div>
+        </div>
+    );
+}
+
+function PollAnimation()
+{   
+
+    return (
+        <div className="poll-anim">
+            <h3>Your Poll</h3>   
+            <div className="poll-anim-bar" style={{animationName: "poll-bar-anim-increase", gridColumn: "2/4"}} >
+                <h4>Option 1</h4>
+            </div>
+            <div className="poll-anim-bar" style={{animationName: "poll-bar-anim-decrease", backgroundColor: "green", gridColumn: "5/7"}} >
+                <h4>Option 2</h4>
             </div>
         </div>
     );
@@ -155,3 +169,4 @@ function displayErrorMessages(errorWord)
 
 /*************************Exports*********************** */
 export default SignIn;
+export {PollAnimation};

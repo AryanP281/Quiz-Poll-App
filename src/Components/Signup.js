@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import {apiBaseUrl, authStatus} from "../Config/Config";
 import { emailRegex, getCookies } from "../Services/Services";
 import { useHistory } from "react-router";
+import { PollAnimation } from "./SignIn";
 
 /**********************************Variables*******************************/
 const signupUrl = `${apiBaseUrl}/auth/signup`; //The api url for creating user account
@@ -52,7 +53,7 @@ function SignUp()
                 </div>
 
                 <div className="auth-anim-sec"> 
-                    <h1>INSERT ANIMATION</h1>
+                    <PollAnimation />
                 </div>
 
             </div>

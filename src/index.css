@@ -59,6 +59,9 @@ input {
   flex-basis: 50%;
   border-top-right-radius: 20px;
   border-bottom-right-radius: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .auth-creds-sec h1 {
@@ -124,6 +127,67 @@ input {
 
 .auth-creds-sec form button:focus {
   transform: scale(1.1);
+}
+
+.poll-anim {
+  width: 50%;
+  height: 50%;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border: 2px dotted var(--bg-gradient-start);
+}
+
+.poll-anim > h3 {
+  grid-column: 1/8;
+  text-align: center;
+  padding-top: 20px;
+  font-size: 20px;
+  color: var(--bg-gradient-end);
+}
+
+.poll-anim-bar {
+  align-self: end;
+  height: 10%;
+  background-color: red;
+  border: 1px solid black;
+  animation-duration: 4s;
+  animation-iteration-count: infinite;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.poll-anim-bar h4 {
+  color: white;
+  text-align: center;
+}
+
+@keyframes poll-bar-anim-increase {
+  0% {
+    height: 10%;
+  }
+
+  50% {
+    height: 90%;
+  }
+
+  100% {
+    height: 10%;
+  }
+}
+
+@keyframes poll-bar-anim-decrease {
+  0% {
+    height: 90%;
+  }
+
+  50% {
+    height: 10%;
+  }
+
+  100% {
+    height: 90%;
+  }
 }
 
 /******************************User Profile************************/
