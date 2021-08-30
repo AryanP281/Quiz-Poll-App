@@ -29,9 +29,10 @@ async function editUserDetails(req : Request, resp : Response) : Promise<void>
         
         //Updating the user profile pic
         const setObj : any = {};
+        let profilePicUrl : string | null = null;
         if(req.file)
         {
-            const profilePicUrl : string | null = await updateUserProfilePic(userId, req.file.buffer);
+            profilePicUrl= await updateUserProfilePic(userId, req.file.buffer);
             if(profilePicUrl === null)
                 throw Error("Failed to update user profile pic")
             else
@@ -53,7 +54,7 @@ async function editUserDetails(req : Request, resp : Response) : Promise<void>
             //Editing the user details document
             await userDetailsCollection.updateOne({_id : new ObjectId(userId)}, {$set : setObj});
         }
-       resp.status(200).json({success: true, code: responseCodes.success});
+       resp.status(200).json({success: true, user: {profilePicUrl}});
     }
     catch(err)
     {
