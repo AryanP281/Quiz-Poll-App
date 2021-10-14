@@ -7,7 +7,7 @@ import UserApiRouter from "./Routes/UserApi";
 import ContentApiRouter from "./Routes/ContentApi";
 
 /******************************Variables************************ */
-const SERVER_PORT : number = (parseInt(process.env.PORT!)) || 5000; //The port to run the server on
+const SERVER_PORT : number = (parseInt(process.env.SERVER_PORT!)) || 5000; //The port to run the server on
 
 /******************************Script*************************/
 const expressApp : express.Application = express(); //Creating express server instance
@@ -27,8 +27,8 @@ expressApp.get("/test", (req,resp) => resp.status(200).json({success:true}));
 //Starting express server
 expressApp.listen(SERVER_PORT, "0.0.0.0", () => console.log(`Express Server started at port ${SERVER_PORT}`));
 
-//Initializing mongodb
-require("./Config/Mongo");
+//Initialzing Database
+require("./Config/MySql");
 
 //Initializing Firebase
 require("./Config/Firebase");

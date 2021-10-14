@@ -1,10 +1,10 @@
 
 /************************Imports*********************** */
 import {Request, Response} from "express";
-import {Collection, ObjectId, Document} from "mongodb";
+import { RowDataPacket } from "mysql2";
 import { responseCodes } from "../Config/App";
-import {mongodb} from "../Config/Mongo";
 import {profilePicturesStorageRef} from "../Config/Firebase";
+import { db } from "../Config/MySql";
 
 /*************************Variables********************** */
 
@@ -28,33 +28,41 @@ async function editUserDetails(req : Request, resp : Response) : Promise<void>
         delete req.body.userId;
         
         //Updating the user profile pic
-        const setObj : any = {};
         let profilePicUrl : string | null = null;
         if(req.file)
         {
             profilePicUrl= await updateUserProfilePic(userId, req.file.buffer);
             if(profilePicUrl === null)
                 throw Error("Failed to update user profile pic")
-            else
-                setObj["picUrl"] = profilePicUrl;
         }
-            
-        //Getting the user details collection
-        const userDetailsCollection = await mongodb.db().collection("UserDetails");
-
-        //Creating the set object containing the values to be updates
-        const valsToUpdate : [string,any][] = Object.entries(req.body);
-        if(valsToUpdate.length > 0 || setObj.picUrl)
+        
+        //Updating the user details
+        const valsToUpdate : string[] = Object.keys(req.body);
+        if(profilePicUrl)
         {
-            //Adding the values to be updated
-            valsToUpdate.forEach(([key,value] : [string,any]) => {
-                setObj[key] = value;
-            });
-            
-            //Editing the user details document
-            await userDetailsCollection.updateOne({_id : new ObjectId(userId)}, {$set : setObj});
+            valsToUpdate.push("imgUrl");
+            req.body.imgUrl = profilePicUrl;
         }
-       resp.status(200).json({success: true, user: {profilePicUrl}});
+        if(valsToUpdate.length)
+        {
+            //Generating the sql query
+            let sqlQuery : string = "UPDATE User SET ";
+            const vals : any[] = [];
+            for(let i = 0; i < valsToUpdate.length - 1; ++i)
+            {
+                sqlQuery += `${valsToUpdate[i]}=?, `;
+                vals.push(req.body[valsToUpdate[i]]);
+            }
+            sqlQuery += `${valsToUpdate[valsToUpdate.length-1]}=?`;
+            vals.push(req.body[valsToUpdate[valsToUpdate.length-1]]);
+            sqlQuery += " WHERE userHash=?";
+            vals.push(userId);
+
+            //Executing the query
+            await db!.query(sqlQuery, vals);
+        }
+        
+        resp.status(200).json({success: true, user: {profilePicUrl}});
     }
     catch(err)
     {
@@ -69,21 +77,43 @@ async function getUserProfile(req : Request, resp : Response) : Promise<void>
 
     try
     {
-        //Getting the user details collection
-        const userDetailsCollection = await mongodb.db().collection("UserDetails");
+        //Getting the user details
+        const userDetails : any = ((await db!.query("SELECT bdate, username, imgUrl FROM User WHERE userHash = ?", [req.body.userId]))[0] as any[])[0];
 
-        //Getting the user details document
-        const userDoc : Document | undefined = await userDetailsCollection.findOne({_id : new ObjectId(req.body.userId)}, {projection : {_id : 0}});
-        if(!userDoc)
-            throw Error("User details document not found");
-        
-        resp.status(200).json({success : true, user : userDoc});
+        //Dividing the user bdate into bday,bmonth and byear
+        if(userDetails.bdate)
+        {
+            userDetails.byear = userDetails.bdate.getFullYear();
+            userDetails.bmonth = userDetails.bdate.getMonth();
+            userDetails.bday = userDetails.bdate.getDate();
+            delete userDetails.bdate;
+        }
+
+        resp.status(200).json({success: true, user : userDetails});
     }
     catch(err)
     {
         console.log(err);
         resp.sendStatus(500);
     }
+}
+
+async function checkUserVote(req : Request, resp: Response) : Promise<void>
+{
+    /*Checks if the user has voted in the given poll*/
+
+    try
+    {
+        const queryRes : any = (await db!.query("SELECT optionId FROM PollVote WHERE userHash=? AND pollId=?", [req.body.userId, req.params.pollId]))[0]
+
+        resp.status(200).json({success:true, userVote: ((queryRes.length) ? queryRes[0].optionId : -1)});
+    }
+    catch(err)
+    {
+        console.log(err);
+        resp.sendStatus(500);
+    }
+
 }
 
 /************************Functions*********************** */
@@ -118,4 +148,4 @@ async function updateUserProfilePic(userId : string, userPicBytes : Buffer) : Pr
 } 
 
 /************************Exports*********************** */
-export {editUserDetails, getUserProfile};
+export {editUserDetails, getUserProfile, checkUserVote};

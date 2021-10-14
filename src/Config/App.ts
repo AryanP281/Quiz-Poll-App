@@ -13,7 +13,8 @@ const responseCodes : any = {
     invalid_token : 5,
     invalid_user_details: 6,
     invalid_new_content: 7,
-    content_not_found: 8
+    content_not_found: 8,
+    user_already_participated: 9
 };
 let JWT_SECRET : string | undefined;
 
@@ -26,7 +27,7 @@ dotenv.config();
 JWT_SECRET = process.env.JWT_SECRET;
 
 //Setting the mongob config details
-const mongoDbConfig : {dbUrl : string, dbName : string, user: string, userPassword: string} = {
+const dbConfig : {dbUrl : string, dbName : string, user: string, userPassword: string} = {
     dbUrl: process.env.DB_URL!, 
     dbName: process.env.DB_NAME!,
     user: process.env.DB_USER!,
@@ -54,4 +55,4 @@ const multerUploader : multer.Multer = multer({
 const isDebugMode = (process.env.DEBUG === "true");
 
 /********************************Exports*********************** */
-export {responseCodes, JWT_SECRET, mongoDbConfig, firebaseConfig, multerUploader, isDebugMode};
+export {responseCodes, JWT_SECRET, dbConfig, firebaseConfig, multerUploader, isDebugMode};
