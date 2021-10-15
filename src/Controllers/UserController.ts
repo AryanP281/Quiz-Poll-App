@@ -1,10 +1,9 @@
 
 /************************Imports*********************** */
 import {Request, Response} from "express";
-import { RowDataPacket } from "mysql2";
 import { responseCodes } from "../Config/App";
 import {profilePicturesStorageRef} from "../Config/Firebase";
-import { db } from "../Config/MySql";
+import { db } from "../Config/Postgres";
 
 /*************************Variables********************** */
 
@@ -42,20 +41,21 @@ async function editUserDetails(req : Request, resp : Response) : Promise<void>
         {
             valsToUpdate.push("imgUrl");
             req.body.imgUrl = profilePicUrl;
+            console.log(profilePicUrl)
         }
         if(valsToUpdate.length)
         {
             //Generating the sql query
-            let sqlQuery : string = "UPDATE User SET ";
+            let sqlQuery : string = "UPDATE \"User\" SET ";
             const vals : any[] = [];
             for(let i = 0; i < valsToUpdate.length - 1; ++i)
             {
-                sqlQuery += `${valsToUpdate[i]}=?, `;
+                sqlQuery += `${valsToUpdate[i]}=$${i+1}, `;
                 vals.push(req.body[valsToUpdate[i]]);
             }
-            sqlQuery += `${valsToUpdate[valsToUpdate.length-1]}=?`;
+            sqlQuery += `${valsToUpdate[valsToUpdate.length-1]}=$${valsToUpdate.length}`;
             vals.push(req.body[valsToUpdate[valsToUpdate.length-1]]);
-            sqlQuery += " WHERE userHash=?";
+            sqlQuery += ` WHERE userHash=$${valsToUpdate.length+1}`;
             vals.push(userId);
 
             //Executing the query
@@ -78,7 +78,7 @@ async function getUserProfile(req : Request, resp : Response) : Promise<void>
     try
     {
         //Getting the user details
-        const userDetails : any = ((await db!.query("SELECT bdate, username, imgUrl FROM User WHERE userHash = ?", [req.body.userId]))[0] as any[])[0];
+        const userDetails : any = (await db!.query("SELECT bdate, username, imgUrl FROM \"User\" WHERE userHash = $1", [req.body.userId])).rows[0];
 
         //Dividing the user bdate into bday,bmonth and byear
         if(userDetails.bdate)
@@ -104,9 +104,9 @@ async function checkUserVote(req : Request, resp: Response) : Promise<void>
 
     try
     {
-        const queryRes : any = (await db!.query("SELECT optionId FROM PollVote WHERE userHash=? AND pollId=?", [req.body.userId, req.params.pollId]))[0]
+        const queryRes : any = (await db!.query("SELECT optionId FROM \"PollVote\" WHERE userHash=$1 AND pollId=$2", [req.body.userId, req.params.pollId])).rows
 
-        resp.status(200).json({success:true, userVote: ((queryRes.length) ? queryRes[0].optionId : -1)});
+        resp.status(200).json({success:true, userVote: ((queryRes.length) ? queryRes[0].optionid : -1)});
     }
     catch(err)
     {

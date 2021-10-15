@@ -28,7 +28,7 @@ expressApp.get("/test", (req,resp) => resp.status(200).json({success:true}));
 expressApp.listen(SERVER_PORT, "0.0.0.0", () => console.log(`Express Server started at port ${SERVER_PORT}`));
 
 //Initialzing Database
-require("./Config/MySql");
+require("./Config/Postgres");
 
 //Initializing Firebase
 require("./Config/Firebase");

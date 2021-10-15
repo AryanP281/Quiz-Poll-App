@@ -4,7 +4,7 @@ import {Request, Response} from "express"
 import {responseCodes, JWT_SECRET, isDebugMode} from "../Config/App"
 import {compareHash, hash} from "../Services/Crypto"
 import jwt from "jsonwebtoken"
-import {db} from "../Config/MySql";
+import {db} from "../Config/Postgres";
 import md5 from "md5";
 
 /********************************Variables*********************** */
@@ -29,7 +29,7 @@ async function createUserAccount(req : Request, resp : Response) : Promise<void>
         const emailHash : string = md5(req.body.user.email);
 
         //Checking if email id is already registered
-        const userDetails : any = (await db!.query("SELECT * FROM User WHERE userHash=?", [emailHash]))[0];
+        const userDetails : any = (await db!.query("SELECT * FROM \"User\" WHERE userHash=$1", [emailHash])).rows;
         
         if(userDetails.length !== 0)
         {
@@ -41,7 +41,7 @@ async function createUserAccount(req : Request, resp : Response) : Promise<void>
         const hashedPassword : string = await hash(req.body.user.pss);
 
         //Creating the user entry
-        await db!.query("INSERT INTO User(userHash,userEmail,password) VALUE (?,?,?)", [emailHash, req.body.user.email, hashedPassword]);
+        await db!.query("INSERT INTO \"User\"(userHash,userEmail,password) VALUES ($1,$2,$3)", [emailHash, req.body.user.email, hashedPassword]);
 
         //Setting the user cookies
         const userToken : string = await jwt.sign(emailHash, JWT_SECRET!); //Creating the jwt token for future authoriazations
@@ -54,7 +54,7 @@ async function createUserAccount(req : Request, resp : Response) : Promise<void>
         console.log(error);
         resp.sendStatus(500);
     }
-
+    
 }
 
 async function authenticateUser(req : Request, resp : Response) : Promise<void>
@@ -74,7 +74,7 @@ async function authenticateUser(req : Request, resp : Response) : Promise<void>
         }
 
         //Getting the user password
-        const user : any = (await db!.query("SELECT userHash, password FROM User WHERE userEmail=?", [userDetails.email]))[0];
+        const user : any = (await db!.query("SELECT userHash, password FROM \"User\" WHERE userEmail=$1", [userDetails.email])).rows;
         if(user.length === 0)
         {
             resp.status(200).json({success: false, code: responseCodes.user_not_found});
@@ -89,7 +89,7 @@ async function authenticateUser(req : Request, resp : Response) : Promise<void>
         }
 
         //Setting cookies
-        const userToken : string = await jwt.sign(user[0].userHash, JWT_SECRET!);
+        const userToken : string = await jwt.sign(user[0].userhash, JWT_SECRET!);
         resp.cookie("userToken", userToken, {httpOnly: true, sameSite: isDebugMode ? "lax" : "none", secure: !isDebugMode});
 
         resp.status(200).json({success: true, code : responseCodes.success});
@@ -99,7 +99,7 @@ async function authenticateUser(req : Request, resp : Response) : Promise<void>
         console.log(err);
         resp.sendStatus(500);
     }
-
+    
 }
 
 async function signoutUser(req: Request, resp: Response) : Promise<void>

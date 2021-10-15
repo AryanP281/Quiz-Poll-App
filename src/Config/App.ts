@@ -27,8 +27,9 @@ dotenv.config();
 JWT_SECRET = process.env.JWT_SECRET;
 
 //Setting the mongob config details
-const dbConfig : {dbUrl : string, dbName : string, user: string, userPassword: string} = {
+const dbConfig : {dbUrl : string, dbPort: number, dbName : string, user: string, userPassword: string} = {
     dbUrl: process.env.DB_URL!, 
+    dbPort: parseInt(process.env.DB_PORT!),
     dbName: process.env.DB_NAME!,
     user: process.env.DB_USER!,
     userPassword: process.env.DB_USER_PASSWORD!
