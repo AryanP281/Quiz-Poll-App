@@ -14,7 +14,8 @@ const responseCodes : any = {
     invalid_user_details: 6,
     invalid_new_content: 7,
     content_not_found: 8,
-    user_already_participated: 9
+    user_already_participated: 9,
+    user_not_participated: 10
 };
 let JWT_SECRET : string | undefined;
 

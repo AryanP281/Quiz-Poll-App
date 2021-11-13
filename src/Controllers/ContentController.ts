@@ -1,6 +1,7 @@
 /**************************Imports**********************/
 import {Request, Response} from "express";
 import { PoolClient } from "pg";
+import internal from "stream";
 import {responseCodes } from "../Config/App";
 import {db} from "../Config/Postgres";
 
@@ -182,8 +183,144 @@ async function addGuestVote(req: Request, resp: Response) : Promise<void>
     }
 }
 
+async function createQuiz(req: Request, resp: Response) : Promise<void>
+{
+    /*Create a new quiz*/
+
+    //Getting the quiz details
+    const quizDetails: {title: string, totalScore: number, questions: {text: string, options: {text: string, isAns: Boolean}[] }[] } | undefined = req.body.quizDetails;
+
+    //Validating input
+    if(!quizDetails || quizDetails.title.length == 0 || quizDetails.questions.length == 0)
+    {
+        resp.status(200).json({success: false, code: responseCodes.invalid_new_content});
+        return;
+    }
+
+    let dbConn: PoolClient | null = null;
+    try
+    {
+        //Getting a connection from the pool
+        dbConn = await db!.connect();
+
+        //Starting the transaction
+        await dbConn.query("START TRANSACTION");
+
+        //Saving quiz
+        const quizId : number = (await dbConn.query("INSERT INTO \"Quiz\"(creatorhash, title, score) VALUES ($1,$2,$3) RETURNING quizid", 
+        [req.body.userId, quizDetails.title, quizDetails.totalScore])).rows[0].quizid;
+
+        //Adding the questions
+        let sqlQuery : string = "INSERT INTO \"QuizQuestion\" (quizid, questionid, text, ismcq) VALUES "; //Constructing the query
+        let values : any[] = [];
+        quizDetails.questions.forEach((question, id) => {
+            const answersCount : number = question.options.filter((option) => option.isAns).length;
+            sqlQuery += `(${quizId}, $${2*id+1}, $${2*id+2}${answersCount == 1 ? ",false":",true"}),`;
+            values.push(id, question.text);
+        });
+        sqlQuery = sqlQuery.slice(0, sqlQuery.length - 1); //Getting rid of the trailing comma after the last tuple
+        await dbConn.query(sqlQuery, values);
+
+        //Adding the options
+        sqlQuery = "INSERT INTO \"QuizOption\" VALUES ";
+        values = [];
+        quizDetails.questions.forEach((question, questionId) => {
+            question.options.forEach((option, optionId) => {
+                sqlQuery += `(${quizId}, ${questionId}, ${optionId}, $${values.length+1}, $${values.length+2}),`;
+                values.push(option.text);
+                values.push(option.isAns);
+            });
+        });
+        sqlQuery = sqlQuery.slice(0, sqlQuery.length-1); //Getting rid of the trailing comma after the last tuple
+        await dbConn.query(sqlQuery, values);
+
+        //Committing the transaction
+        await dbConn.query("COMMIT");
+
+        resp.status(200).json({success: true, quizId: quizId});
+    }
+    catch(err)
+    {
+        //Rolling back the transaction
+        await dbConn?.query("ROLLBACK");
+
+        console.log(err);
+        resp.sendStatus(500);
+    }
+    finally
+    {
+        dbConn?.release();
+    }
+
+}
+
+async function getUserQuizResults(req : Request, resp : Response) : Promise<void>
+{
+    /*Calculates and returns the user score for the given quiz*/
+
+    const userChoices : {quizId : number, choices: {questionId: number, optionIds: number[]}[] } | undefined = req.body.userChoices;
+
+    if(!userChoices)
+    {
+        resp.status(200).json({success: false, code: responseCodes.content_not_found});
+        return;
+    }
+
+    try
+    {
+        //Checking if the user has already participated in the quiz
+        const hasAlreadyAttempted : boolean = (await db!.query("SELECT COUNT(score) FROM \"QuizScores\" WHERE quizid=$1 AND userhash=$2",
+        [userChoices.quizId, req.body.userId])).rows[0].count == 1;
+        if(hasAlreadyAttempted)
+        {
+            resp.status(200).json({success: false, code: responseCodes.user_already_participated});
+            return;
+        }
+        
+        
+        //Calculating the points per question for the quiz
+        const quizScoreDetails : {score: number, questioncount: number | string} = (await db!.query("SELECT Q.score, COUNT(O.questionid) AS questioncount FROM \"Quiz\" Q, \"QuizQuestion\" O WHERE O.quizid=Q.quizid AND Q.quizid=$1 GROUP BY Q.score", 
+        [userChoices.quizId])).rows[0];
+        quizScoreDetails.questioncount = parseInt(quizScoreDetails.questioncount as string);
+        const pointsPerQuestion : number = quizScoreDetails.score / quizScoreDetails.questioncount; 
+
+        //Getting the correct options for each question
+        const correctOptions : Map<number, Set<number>> = new Map();
+        (await db!.query("SELECT questionid,optionid FROM \"QuizOption\" WHERE quizid=$1 AND isans=true", 
+        [userChoices.quizId])).rows.forEach((row : {questionid: number, optionid: number}) => {
+            if(!correctOptions.has(row.questionid))
+                correctOptions.set(row.questionid, new Set<number>());
+            correctOptions.get(row.questionid)!.add(row.optionid);
+        });
+
+        //Calculating player score
+        let playerScore : number = 0;
+        let pointsPerOption : number = 0; //The points per correct option
+        let correctOptionsSet : Set<number> | undefined = undefined; //The set of correct options for the current question 
+        userChoices.choices.forEach((question) => {
+            correctOptionsSet = correctOptions.get(question.questionId);
+            pointsPerOption = pointsPerQuestion / correctOptionsSet!.size;
+            question.optionIds.forEach((optionId) => {
+                if(correctOptionsSet!.has(optionId))
+                    playerScore += pointsPerOption;
+            });
+        });
+
+        //Saving the user results
+        await db!.query("INSERT INTO \"QuizScores\" VALUES ($1,$2,$3)", [userChoices.quizId, req.body.userId, playerScore]);
+
+        resp.status(200).json({success: true, score: playerScore});
+    }
+    catch(err)
+    {
+        console.log(err);
+        resp.sendStatus(500);
+    }
+
+}
+
 /**************************Functions**********************/
 
 /**************************Exports**********************/
-export {createPoll, getPoll, addVoteToPoll, getUserPolls, addGuestVote};
+export {createPoll, getPoll, addVoteToPoll, getUserPolls, addGuestVote, createQuiz, getUserQuizResults};
 

@@ -17,3 +17,31 @@ CREATE TABLE PollVote(userHash CHAR(32), pollId INT NOT NULL, optionId INT NOT N
 ALTER TABLE PollVote ADD CONSTRAINT pollvote_user_fk FOREIGN KEY (userHash) REFERENCES User(userHash) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE PollVote ADD CONSTRAINT pollvote_option_fk FOREIGN KEY (pollId,optionId) REFERENCES PollOption(pollId,optionId) ON DELETE CASCADE ON UPDATE CASCADE;
+
+CREATE TABLE "Quiz"(quizId SERIAL PRIMARY KEY, creatorHash CHAR(32) NOT NULL, title VARCHAR(100) NOT NULL,score SMALLINT NOT NULL);
+
+ALTER TABLE "Quiz" ADD CONSTRAINT quiz_user_fk FOREIGN KEY (creatorhash) REFERENCES "User"(userhash) ON DELETE CASCADE ON UPDATE CASCADE;
+
+CREATE TABLE "QuizQuestion"(quizid INT, questionid SMALLINT, text VARCHAR(100) NOT NULL, ismcq BOOL DEFAULT false);
+
+ALTER TABLE "QuizQuestion" ADD CONSTRAINT question_quiz_fk FOREIGN KEY (quizid) REFERENCES "Quiz"(quizid) ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "QuizQuestion" ADD PRIMARY KEY (quizid,questionid);
+
+CREATE TABLE "QuizOption"(quizid INT, questionid SMALLINT, optionid SMALLINT, text VARCHAR(100) NOT NULL, isans BOOL DEFAULT FALSE);
+
+ALTER TABLE "QuizOption" ADD CONSTRAINT quizoption_question_fk FOREIGN KEY (quizid, questionid) REFERENCES "QuizQuestion" (quizid, questionid);
+
+ALTER TABLE "QuizOption" ADD PRIMARY KEY (quizid, questionid, optionid);
+
+CREATE TABLE "QuizScores" (quizid INT, userhash CHAR(32), score REAL DEFAULT 0.0);
+
+ALTER TABLE "QuizScores" ADD CONSTRAINT score_quiz_fk FOREIGN KEY (quizid) REFERENCES "Quiz"(quizid);
+
+ALTER TABLE "QuizScores" ADD CONSTRAINT score_user_fk FOREIGN KEY (userhash) REFERENCES "User"(userhash);
+
+ALTER TABLE "QuizScores" ADD PRIMARY KEY (quizid,userhash);
+
+
+
+

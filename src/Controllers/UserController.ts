@@ -116,6 +116,32 @@ async function checkUserVote(req : Request, resp: Response) : Promise<void>
 
 }
 
+async function getUserScore(req : Request, resp : Response)
+{
+    /*Returns the user score for the given quiz*/
+
+    try
+    {
+        const quizId : number = parseInt(req.query.quizid as string); //Getting the quiz id
+
+        //Getting the user results for the quiz
+        const userResults : any | undefined = (await db!.query("SELECT score FROM \"QuizScores\" WHERE quizid=$1 AND userhash=$2", 
+        [quizId, req.body.userId])).rows[0];
+        if(!userResults)
+        {
+            resp.status(200).json({success: false, code: responseCodes.user_not_participated});
+            return;
+        }
+
+        resp.status(200).json({success: true, score: userResults.score});
+    }
+    catch(err)
+    {
+        console.log(err);
+        resp.sendStatus(500);
+    }
+}
+
 /************************Functions*********************** */
 async function updateUserProfilePic(userId : string, userPicBytes : Buffer) : Promise<string | null>
 {
@@ -148,4 +174,4 @@ async function updateUserProfilePic(userId : string, userPicBytes : Buffer) : Pr
 } 
 
 /************************Exports*********************** */
-export {editUserDetails, getUserProfile, checkUserVote};
+export {editUserDetails, getUserProfile, checkUserVote, getUserScore};

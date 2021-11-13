@@ -67,7 +67,7 @@ async function authenticateUser(req : Request, resp : Response) : Promise<void>
         const userDetails = req.body.user;
 
         //Check if the details are invalid
-        if(!userDetails.email || !userDetails.pss)
+        if(!userDetails || !userDetails.email || !userDetails.pss)
         {
             resp.status(200).json({success: false, code: responseCodes.invalid_credentials});
             return;
