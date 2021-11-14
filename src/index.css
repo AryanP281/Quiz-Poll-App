@@ -1,5 +1,8 @@
 /*************************************Imports********************************/
-@import url('https://fonts.googleapis.com/css2?family=Style+Script&display=swap');
+@font-face {
+  font-family: 'Blanka';
+  src: url("./Assets/Fonts/Blanka-Regular.otf");
+}
 
 /*************************************Custom Properties********************************/
 :root {
@@ -11,7 +14,7 @@
 * {
   margin: 0;
   box-sizing: border-box;
-  font-family: 'Style Script', cursive;
+  font-family: 'Blanka', sans-serif;
 }
 
 input {
@@ -164,7 +167,7 @@ input {
 
 @keyframes poll-bar-anim-increase {
   0% {
-    height: 10%;
+    height: 15%;
   }
 
   50% {
@@ -172,7 +175,7 @@ input {
   }
 
   100% {
-    height: 10%;
+    height: 15%;
   }
 }
 
@@ -182,7 +185,7 @@ input {
   }
 
   50% {
-    height: 10%;
+    height: 15%;
   }
 
   100% {
@@ -347,7 +350,7 @@ input {
   margin-top: 20px;
 }
 
-.new-poll-box input {
+.textbox {
   display: block;
   padding: 8px;
   margin-top: 4px;
@@ -357,7 +360,7 @@ input {
   width: 100%; 
 }
 
-.new-poll-box form > button {
+.create-btn {
   width: 100%;
   margin-top: 20px;
   padding: 10px 0 10px 0;
@@ -423,6 +426,147 @@ input {
 .box-title-bar > div {
   flex-basis: 10%;
   flex-grow: 1;
+}
+
+/******************************New Quiz************************/
+.new-quiz {
+  width: 100%;
+  height: 100%;
+  background-image: linear-gradient(to bottom right, var(--bg-gradient-start), var(--bg-gradient-end));
+  display: flex;
+  justify-content: center;
+}
+
+.new-quiz #details {
+  align-self: center;
+  flex-basis: 30%;
+  height: 40%;
+  background-color: white;
+  border-radius: 20px;
+  padding: 20px;
+}
+
+.new-quiz #details form {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/******************************New Quiz Questions************************/
+.new-quiz-questions {
+  width: 100%;
+  height: 100%;
+  background-image: linear-gradient(to bottom right, var(--bg-gradient-start), var(--bg-gradient-end));
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  padding: 10px;
+}
+
+.new-quiz-questions #titlebar {
+  width: 50%;
+  flex-basis: 20%;
+  align-self: center;
+  background-color: white;
+  padding: 5px 10px 5px 10px;
+}
+
+.new-quiz-questions #titlebar h2 {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.new-quiz-questions #titlebar .create-btn {
+  flex-basis: 33%;
+  height: 40%;
+}
+
+.new-quiz-questions #titlebar h3 {
+  height: 50%;
+}
+
+.new-quiz-questions #titlebar span {
+  display: inline-block;
+  text-align: center;
+  font-size: 20px;
+  margin-top: 10%;
+}
+
+.questions {
+  flex-basis: 80%;
+  width: 100%;
+  margin-top: 20px;
+  max-height: 80%;
+}
+
+.new-question-box {
+  position: relative;
+  left: 12%;
+  width: 75%;
+  background-color: white;
+  height: 100%;
+  padding: 20px;
+}
+
+.new-question-box form {
+  height: 90%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  overflow: auto;
+}
+
+.new-question-box .textbox {
+  padding: 10px 5px 10px 5px;
+  margin-bottom: 5px;
+}
+
+.questions #left-arrow {
+  position: relative;
+  top: -100%;
+  width: 5%;
+  height: 100%;
+  background-color: rgba(10,10,10,0.2);
+  border: 0px solid black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.questions #right-arrow {
+  position: relative;
+  top: -200%;
+  left: 95%;
+  width: 5%;
+  height: 100%;
+  background-color: rgba(10,10,10,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center
+}
+
+.questions #left-arrow:hover {
+  background-color: rgba(10,10,10,0.5);
+}
+
+.questions #right-arrow:hover {
+  background-color: rgba(10,10,10,0.5);
+}
+
+.new-question-box .option-card {
+  display: flex;
+  width: 100%;
+  border: 1px solid black;
+  justify-content: space-around;
+  padding: 10px;
+}
+
+.new-question-box .option-card .option-is-answer {
+  height: 100%;
+  flex-basis: 10%;
 }
 
 /******************************Poll************************/
@@ -540,7 +684,6 @@ input {
   flex-grow: 2;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
 }
 
 .bottom-bar {
@@ -689,4 +832,21 @@ input {
       flex-basis: 10%;
       background-color: white;
     }
+
+    .new-quiz #details {
+      flex-basis: 75%;
+      padding: 10px;
+    }
+
+    .new-quiz #details .create-btn {
+      font-size: 18px;
+      padding: 5px;
+    }
+    
+}
+
+@media screen and (max-height: 500px) {
+  .new-quiz #details {
+    height: 50%;
+  }
 }

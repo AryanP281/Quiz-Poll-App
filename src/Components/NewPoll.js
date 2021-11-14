@@ -38,7 +38,7 @@ function NewPoll()
                 <form onSubmit={(event) => {
                     event.preventDefault();
                 }}>
-                    <input type="text" id="poll_title" placeholder="Enter Question" className={(resStatus[0] & 1) ? "invalid-input" : ""}/>
+                    <input type="text" id="poll_title" placeholder="Enter Question" className={(resStatus[0] & 1) ? "invalid-input" : "textbox"}/>
                     <div>
                         {options.map((option) => <NewPollOption key={option.id} option={option} options={options} setOptions={setOptions}/>)}
                     </div>
@@ -46,7 +46,7 @@ function NewPoll()
                         <button id="new-option-btn" onClick={() => addNewOption(options, setOptions)}> <FcAddRow size={40}/> </button>
                     </div>
 
-                    <button type="submit" onClick={() => {
+                    <button className="create-btn" type="submit" onClick={() => {
                             console.log(pollCreationSemaphore)
                             if(!pollCreationSemaphore)
                             {
@@ -72,7 +72,7 @@ function NewPollOption(props)
 
     return (
         <div className="new-poll-option">
-            <input type="text" onChange={(e) => option.txt= e.target.value} placeholder={option.txt.length ? option.txt : "Enter new option"} style={{flexBasis: "90%", flexGrow: "2"}}/>
+            <input className="textbox" type="text" onChange={(e) => option.txt= e.target.value} placeholder={option.txt.length ? option.txt : "Enter new option"} style={{flexBasis: "90%", flexGrow: "2"}}/>
             <button onClick={() => deleteOption(option, props.options, props.setOptions)}>
                 <FcDeleteRow size={40}/>
             </button>

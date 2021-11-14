@@ -5,7 +5,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { useHistory } from "react-router-dom";
 import {loadUserData} from "../Components/UserProfile";
 import { apiBaseUrl, authStatus } from "../Config/Config";
-import { setPolls } from "../Redux/Slices/UserDetailsSlice";
+import { setPolls, resetDetails } from "../Redux/Slices/UserDetailsSlice";
+import defaultDp from "../Assets/Images/DefaultDp.png";
 
 /****************************Variables************************/
 const getUserPollsApiUrl = `${apiBaseUrl}/content/userpolls`; //The api url to get the polls created by the current user 
@@ -44,7 +45,7 @@ function Home()
 
     return (
         <div className="home">
-            <SideBar history={history}/>
+            <SideBar history={history} dispatch={dispatch}/>
             <div className="dashboard">
                 <TopBar userDetails={userDetails} history={history}/>
                 <div className="user-polls-list">
@@ -52,31 +53,19 @@ function Home()
                         {userDetails.polls && <UserPollsTable userPolls={userDetails.polls} history={history}/>}
                     </ContentList>
                 </div>
-                <BottomBar />
             </div>
         </div>
     );
 }
 
-function SideBar({history})
+function SideBar({history, dispatch})
 {
     
     return (
         <div className="side-nav-bar">
             <button onClick={() => history.push("/newpoll")}>Create New Poll</button>
             <button onClick={() => history.push("/editprofile")}>Edit Profile</button>
-            <button onClick={() => signoutUser(history)}>Log out</button>
-        </div>
-    );
-}
-
-function BottomBar()
-{
-    /*The bottom bar component which replaces the side nav bar on smaller screens */
-
-    return (
-        <div className="bottom-bar">
-        
+            <button onClick={() => signoutUser(history, dispatch)}>Log out</button>
         </div>
     );
 }
@@ -91,7 +80,7 @@ function TopBar(props)
             <div style={{flexBasis: "70%", flexGrow: "2"}}></div>
             {userDetails.initialized && <div className="profile-details">
                 <h3>{userDetails.username}</h3>
-                <img className="user-pic" src={userDetails.profilePic} onClick={() => history.push("/editprofile")}></img>
+                <img className="user-pic" src={userDetails.profilePic ? userDetails.profilePic : defaultDp} onClick={() => history.push("/editprofile")}></img>
             </div>}
         </div>
     );
@@ -118,7 +107,7 @@ function UserPollsTable(props)
     const displayPollDetails = () => {
         const pollDetails = [];
         props.userPolls.forEach((poll) => {
-            pollDetails.push(<button onClick={() => props.history.push(`/poll/${poll.id}`)}>{poll.name}</button>);
+            pollDetails.push(<button onClick={() => props.history.push(`/poll/${poll.pollid}`)}>{poll.title}</button>);
             pollDetails.push(<h3>{`${poll.votes} votes`}</h3>)
         });
         return pollDetails;
@@ -161,7 +150,7 @@ function loadUserPolls(dispatch)
     })
 }
 
-function signoutUser(history)
+function signoutUser(history, dispatch)
 {
     /*Signs out the user */
 
@@ -173,6 +162,7 @@ function signoutUser(history)
         if(resp.status !== 200)
             throw Error(resp);
         sessionStorage.setItem("authStatus", authStatus.notLogged);
+        dispatch(resetDetails());
         history.replace("/signin");
     })
     .catch((err) => {

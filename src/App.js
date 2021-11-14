@@ -6,6 +6,9 @@ import UserProfile from "./Components/UserProfile";
 import Home from "./Components/Home";
 import NewPoll from "./Components/NewPoll";
 import Poll from "./Components/Poll";
+import NewQuiz from "./Components/NewQuiz";
+import NewQuizQuestions from "./Components/NewQuizQuestions";
+import { Toaster } from "react-hot-toast";
 
 function App() 
 {
@@ -36,11 +39,21 @@ function App()
             <NewPoll />
           </Route>
 
+          <Route exact path="/newquiz">
+            <NewQuiz />
+          </Route>
+
+          <Route exact path="/newquiz/questions">
+            <NewQuizQuestions />
+          </Route>
+
           <Route path="/poll/:pollId">
             <Poll />
           </Route>
 
         </Switch>
+
+        <Toaster toastOptions={{duration: 4000, position: "top-center", style: {backgroundColor: "#7F00FF", color: "white"}}}/>
       </div>
     </Router>
   );

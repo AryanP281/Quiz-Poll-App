@@ -8,14 +8,15 @@ import {apiBaseUrl, authStatus} from "../Config/Config";
 const getPollApiBaseUrl = `${apiBaseUrl}/content/poll`; //The base url for the get poll request
 const addVoteApiUrl = `${apiBaseUrl}/content/poll/vote`; //The api url to add the user's vote in the poll
 const addGuestVoteApiUrl = `${addVoteApiUrl}/guest`; //The api url to add the guest vote
+const voteCheckApiUrl = `${apiBaseUrl}/users/voted`; //The api url to check if the user has voted
 let pollId; //The id of the current poll
-let voted = undefined; //Indicates if the user has voted in the given poll
 
 /******************************Components**************************** */
 function Poll()
 {
     pollId = useParams().pollId; //The id of the poll to be displayed
     const [poll, setPoll] = useState(null); //The poll data to be displayed
+    const [voted, setVoted] = useState(undefined); //Whether the user has already voted in the given poll
     const history = useHistory();
 
     //Getting the user auth status
@@ -24,10 +25,13 @@ function Poll()
     //Getting the poll details
     useEffect(() => {
         getPoll(pollId, setPoll); //Getting the poll details
-    }, []);
 
-    //Checking if the user is a guest and has already voted in the poll
-    useEffect(() => checkIfGuestUserHasVoted(userAuthStatus), [voted]);
+        //Checking if the user has already voted in the poll
+        if(userAuthStatus === authStatus.logged)
+            checkIfUserVoted(setVoted);
+        else
+        checkIfGuestUserHasVoted(userAuthStatus, setVoted);
+    }, []);
 
     console.log("Poll")
 
@@ -37,7 +41,7 @@ function Poll()
                 <div className="box-title-bar" style={{flexBasis: "10%", flexGrow: 1}}>
                     {userAuthStatus === authStatus.logged && <button onClick={() => history.push("/")}>Home</button>}
                     {userAuthStatus === authStatus.guest && <button onClick={() => history.push("/signin")}>Sign In</button>}
-                    <h1>{(poll && poll.name.length) ? poll.name : "Loading"}</h1>
+                    <h1>{(poll && poll.title.length) ? poll.title : "Loading"}</h1>
                     <button onClick={copyShareableLink}>Share</button>
                 </div>
 
@@ -49,8 +53,8 @@ function Poll()
                     {poll && poll.options.map((option) => {
                         return(
                             <button key={option.id} class="poll-option-btn" disabled={voted} onClick={() => {
-                                addUserVote(option.id,userAuthStatus,poll, setPoll);
-                            }} style={{backgroundColor: (voted !== undefined ? (option.id === voted ? "var(--bg-gradient-end)" : "grey") : "")}}>{option.txt}</button>
+                                addUserVote(option.id,userAuthStatus,poll, setPoll, setVoted);
+                            }} style={{backgroundColor: (voted !== undefined ? (option.id === voted ? "var(--bg-gradient-end)" : "grey") : "")}}>{option.text}</button>
                         );
                     })}
                 </div>
@@ -94,7 +98,7 @@ function PollGraph(props)
                         <div style={getBarStyle(option.percentage, index)}>
                             <h5 style={{textAlign: "center", alignSelf: "center", flexGrow: 1}}>{Math.floor(option.percentage)}%</h5>
                         </div>
-                        <h5 style={{textAlign: "center", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis"}}>{option.txt}</h5>
+                        <h5 style={{textAlign: "center", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis"}}>{option.text}</h5>
                     </div>
                 );
             })}
@@ -125,9 +129,6 @@ function getPoll(pollId, setPoll)
             console.log(data)
         else
         {
-            if(data.userVoted !== -1)
-                voted = data.userVoted;
-
             setPoll(data.poll);
             return;
         }
@@ -139,7 +140,34 @@ function getPoll(pollId, setPoll)
 
 }
 
-function addUserVote(voteId, userAuthStatus, polls, setPolls)
+function checkIfUserVoted(setVoted)
+{
+    /*Checks if the currently logged user has already voted in the poll*/
+
+    fetch(`${voteCheckApiUrl}/${pollId}`, {
+        method: "GET",
+        credentials: "include"
+    })
+    .then((resp) => {
+        if(resp.status !== 200)
+            throw Error(resp.status);
+        
+        return resp.json();
+    })
+    .then((data) => {
+        console.log(data)
+        if(!data.success)
+            throw Error(data);
+        
+        if(data.userVote !== -1)
+            setVoted(data.userVote);
+    })
+    .catch((err) => {
+        console.log(err);
+    });
+}
+
+function addUserVote(voteId, userAuthStatus, polls, setPolls, setVoted)
 {
     /*Adds the user's vote to the poll */
 
@@ -152,7 +180,7 @@ function addUserVote(voteId, userAuthStatus, polls, setPolls)
             "Content-Type": "application/json"
         },
         credentials: "include",
-        body: JSON.stringify({pollId, voteId})
+        body: JSON.stringify({pollId, optionId: voteId})
     })
     .then((resp) => {
         if(resp.status !== 200)
@@ -163,8 +191,6 @@ function addUserVote(voteId, userAuthStatus, polls, setPolls)
         if(!data.success)
             throw Error(data.code);
 
-        voted = voteId;
-
         //Updating list of voted polls for guest user
         if(userAuthStatus === authStatus.guest)
             updateGuestVotesList(pollId, voteId);
@@ -173,6 +199,7 @@ function addUserVote(voteId, userAuthStatus, polls, setPolls)
         const newPoll = {...polls};
         newPoll.options[voteId].votes++;
         setPolls(newPoll);
+        setVoted(voteId);
     })
     .catch((err) => {
         console.log(err);
@@ -199,7 +226,7 @@ function copyShareableLink()
 
 }
 
-function checkIfGuestUserHasVoted(userAuthStatus)
+function checkIfGuestUserHasVoted(userAuthStatus, setVoted)
 {
     /*Checks if the user is a guest and has already voted in the poll*/
 
@@ -210,7 +237,7 @@ function checkIfGuestUserHasVoted(userAuthStatus)
         {
             votedPolls = JSON.parse(votedPolls);
             if(votedPolls[pollId])
-                voted = votedPolls[pollId];
+                setVoted(votedPolls[pollId]);
         }
     }
 }

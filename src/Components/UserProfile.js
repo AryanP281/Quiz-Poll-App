@@ -5,7 +5,7 @@ import { useSelector, useDispatch } from "react-redux";
 import {setUserDetails} from "../Redux/Slices/UserDetailsSlice";
 import { useEffect, useState } from "react";
 import { useHistory } from "react-router-dom";
-
+import defaultDp from "../Assets/Images/DefaultDp.png";
 
 /******************************Variables**************************** */
 const getUserDetailsApiUrl = `${apiBaseUrl}/users/profile`; //The api url to get the user profile details
@@ -71,7 +71,7 @@ function UserProfile()
                     <div />
                 </div>
                 
-                <img className="user-pic" src={profilePicUrl} alt="pic"/>
+                <img className="user-pic" src={profilePicUrl ? profilePicUrl : defaultDp} alt="pic"/>
                 <input type="file" id="profile_pic" accept="image/jpeg" onChange={(e) => setUserProfilePic(setProfilePicUrl, e)}/>
                 
                 <form onSubmit={(event) => {
@@ -138,7 +138,8 @@ function loadUserData(dispatch)
             throw Error(data.code);
         
         //Setting the user details
-        dispatch(setUserDetails({username: data.user.username, bdate: {day: data.user.bday, month: data.user.bmonth, year: data.user.byear}, followers: data.user.followers, following: data.user.following, profilePicUrl : data.user.picUrl}));
+        console.log(data)
+        dispatch(setUserDetails({username: data.user.username, bdate: {day: data.user.bday, month: data.user.bmonth, year: data.user.byear}, profilePicUrl : data.user.imgurl}));
     })
     .catch((err) => {
         console.log(err);
@@ -196,6 +197,22 @@ function updateUserData(oldDetails, dispatch, setShowLoadingSpinner)
         if(userDetails.profilePic)
             formData.append("profilePic", userDetails.profilePic);
         
+        //Converting individual date components to timestamp string
+        if(formData.has("bday") || formData.has("bmonth") || formData.has("byear"))
+        {
+            let bdateString = "";
+            const dateCompNames = ["byear", "bmonth", "bday"];
+            dateCompNames.forEach((comp, index) => {
+                if(formData.has(comp))
+                {
+                    bdateString += index !== dateCompNames.length - 1 ? `${formData.get(comp)}-`:`${formData.get(comp)}`;
+                    formData.delete(comp);
+                }
+                else
+                    bdateString += index !== dateCompNames.length - 1 ? `${userDetails[comp]}-`:`${userDetails[comp]}`;
+            });
+            formData.append("bdate", bdateString);
+        }
         
         //Sending request to update user details
         fetch(editUserDetailsApiUrl, {
@@ -219,10 +236,10 @@ function updateUserData(oldDetails, dispatch, setShowLoadingSpinner)
                     day: userDetails.bday ? userDetails.bday : oldDetails.bdate.day, 
                     month: userDetails.bmonth ? userDetails.bmonth : oldDetails.bdate.month,
                     year: userDetails.byear ? userDetails.byear : oldDetails.bdate.year,
-                },
-                followers: oldDetails.followers,
-                following: oldDetails.following,
+                }
             };
+            if(data.user.profilePicUrl) updatedDetails.profilePicUrl = data.user.profilePicUrl;
+
             dispatch(setUserDetails(updatedDetails));
             setShowLoadingSpinner(false);
         })
