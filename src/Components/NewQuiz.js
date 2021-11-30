@@ -3,7 +3,11 @@
 import toast from "react-hot-toast";
 import { useSelector, useDispatch } from "react-redux";
 import { useHistory } from "react-router";
-import {setTitle, setTotalScore, updateNewQuizState} from "../Redux/Slices/NewQuizSlice";
+import {setTitle, setTotalScore} from "../Redux/Slices/NewQuizSlice";
+import {authStatus} from "../Config/Config";
+
+/******************************Components**************************** */
+let redirected = false; //Semaphore to control redirection to login page
 
 /******************************Components**************************** */
 function NewQuiz()
@@ -11,6 +15,16 @@ function NewQuiz()
     const quizDetails = useSelector((state) => state.newQuizDetails);
     const dispatch = useDispatch();
     const history = useHistory();
+
+    //Checking if the user has signed in
+    const userAuthStatus = sessionStorage.getItem("authStatus");
+    if((userAuthStatus === null || userAuthStatus !== authStatus.logged) && !redirected)
+    {
+        redirected = true;
+        toast("Please login to create quiz");
+        history.replace("/signin");
+        return null
+    }
 
     return (
         <div className="new-quiz">

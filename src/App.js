@@ -8,7 +8,9 @@ import NewPoll from "./Components/NewPoll";
 import Poll from "./Components/Poll";
 import NewQuiz from "./Components/NewQuiz";
 import NewQuizQuestions from "./Components/NewQuizQuestions";
+import Quiz from "./Components/Quiz";
 import { Toaster } from "react-hot-toast";
+import QuizQuestion from "./Components/QuizQuestion";
 
 function App() 
 {
@@ -49,6 +51,14 @@ function App()
 
           <Route path="/poll/:pollId">
             <Poll />
+          </Route>
+
+          <Route path="/quiz/:quizId/questions">
+            <QuizQuestion />
+          </Route>
+
+          <Route path="/quiz/:quizId">
+            <Quiz />
           </Route>
 
         </Switch>

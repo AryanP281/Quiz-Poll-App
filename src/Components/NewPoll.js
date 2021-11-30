@@ -3,12 +3,14 @@ import {useState} from "react";
 import {FcDeleteRow, FcAddRow} from "react-icons/fc";
 import { useHistory } from "react-router-dom";
 import {apiBaseUrl, authStatus} from "../Config/Config";
+import {toast} from "react-hot-toast";
 
 /******************************Variables**************************** */
 let newOptionId = 0; //The id for new option. Its unique for each option
 const createNewPollApiUrl = `${apiBaseUrl}/content/createpoll`; //The api url to create new poll
 const errorMessages = ["Poll title cannot be empty", "Poll should have atleast one non-empty option", "Failed to create new poll"];
 let pollCreationSemaphore = false; //A semaphore to prevent multiple clicks of create poll button
+let redirected = false; //Semaphore to control redirection to login page
 
 /******************************Components**************************** */
 function NewPoll()
@@ -19,8 +21,10 @@ function NewPoll()
 
     //Checking if the user is logged in
     const userAuthStatus = sessionStorage.getItem("authStatus");
-    if(userAuthStatus === null || userAuthStatus !== authStatus.logged)
+    if((userAuthStatus === null || userAuthStatus !== authStatus.logged) && !redirected)
     {
+        redirected = true;
+        toast("Please login to create poll");
         history.replace("/signin");
         return null
     }
