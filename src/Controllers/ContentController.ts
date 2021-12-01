@@ -258,13 +258,18 @@ async function getUserQuizResults(req : Request, resp : Response) : Promise<void
 {
     /*Calculates and returns the user score for the given quiz*/
 
-    const userChoices : {quizId : number, choices: {questionId: number, optionIds: number[]}[] } | undefined = req.body.userChoices;
-
-    if(!userChoices)
+    if(!req.body.userChoices)
     {
         resp.status(200).json({success: false, code: responseCodes.content_not_found});
         return;
     }
+    
+    //Constructing the user choices object
+    const userChoices : {quizId : number, choices: {questionId: number, optionIds: number[]}[] } = {quizId: parseInt(req.body.userChoices.quizId), choices: []};
+    req.body.userChoices.choices.forEach((question : {questionId:string,optionIds:string[]}) => {
+        const newChoice: {questionId: number, optionIds: number[]} = {questionId: parseInt(question.questionId), optionIds: []};
+        question.optionIds.forEach((id:string) => newChoice.optionIds.push(parseInt(id)));
+    });
 
     try
     {
@@ -319,8 +324,107 @@ async function getUserQuizResults(req : Request, resp : Response) : Promise<void
 
 }
 
+async function getQuiz(req: Request, resp: Response) : Promise<void>
+{
+    /*Retrives and responds with the given quiz details*/
+
+    try
+    {
+        const quizId : number | undefined = parseInt(req.params.quizId); //Getting the quiz id
+        if(!quizId)
+        {
+            resp.status(200).json({success: false, code: responseCodes.content_not_found});
+            return;
+        }
+
+        //Retrieving the quiz details
+        let sqlQuery : string = "SELECT title,score,username AS creator FROM \"Quiz\" INNER JOIN \"User\" ON userhash=creatorhash WHERE quizid=$1";
+        const quizDetails : any = (await db!.query(sqlQuery, [quizId])).rows[0];
+        if(!quizDetails)
+        {
+            resp.status(200).json({success: false, code: responseCodes.content_not_found});
+            return;
+        }
+
+        //Retrieving the question details
+        sqlQuery = "SELECT Q.questionid,Q.text AS questiontext,Q.ismcq,O.optionid,O.text AS optiontext FROM \"QuizQuestion\" Q, \"QuizOption\" O WHERE O.questionid=Q.questionid AND O.quizid=Q.quizid AND Q.quizid=$1 ORDER BY Q.questionid";
+        const questionsDetails : any[] = (await db!.query(sqlQuery, [quizId])).rows;
+        quizDetails.questions = []; //Initalizing the questions list
+        questionsDetails.forEach((det) => {
+            if(quizDetails.questions.length === det.questionid)
+                quizDetails.questions.push({id: det.questionid, text: det.questiontext, isMcq: det.ismcq, options: []});
+            quizDetails.questions[det.questionid].options.push({id: det.optionid, text: det.optiontext});
+        })
+        
+        resp.status(200).json({success: true, quizDetails});
+    }
+    catch(err)
+    {
+        console.log(err);
+        resp.sendStatus(500);
+    }
+}
+
+async function getGuestQuizResults(req : Request, resp: Response) : Promise<void> 
+{
+    /*Gets the quiz results for guest user */
+
+    if(!req.body.userChoices)
+    {
+        resp.status(200).json({success: false, code: responseCodes.content_not_found});
+        return;
+    }
+    
+    //Constructing the user choices object
+    const userChoices : {quizId : number, choices: {questionId: number, optionIds: number[]}[] } = {quizId: parseInt(req.body.userChoices.quizId), choices: []};
+    req.body.userChoices.choices.forEach((question : {questionId:string,optionIds:string[]}) => {
+        const newChoice: {questionId: number, optionIds: number[]} = {questionId: parseInt(question.questionId), optionIds: []};
+        question.optionIds.forEach((id:string) => newChoice.optionIds.push(parseInt(id)));
+        userChoices.choices.push(newChoice);
+    });
+
+    try
+    {
+
+        //Calculating the points per question for the quiz
+        const quizScoreDetails : {score: number, questioncount: number | string} = (await db!.query("SELECT Q.score, COUNT(O.questionid) AS questioncount FROM \"Quiz\" Q, \"QuizQuestion\" O WHERE O.quizid=Q.quizid AND Q.quizid=$1 GROUP BY Q.score", 
+        [userChoices.quizId])).rows[0];
+        quizScoreDetails.questioncount = parseInt(quizScoreDetails.questioncount as string);
+        const pointsPerQuestion : number = quizScoreDetails.score / quizScoreDetails.questioncount; 
+
+        //Getting the correct options for each question
+        const correctOptions : Map<number, Set<number>> = new Map();
+        (await db!.query("SELECT questionid,optionid FROM \"QuizOption\" WHERE quizid=$1 AND isans=true", 
+        [userChoices.quizId])).rows.forEach((row : {questionid: number, optionid: number}) => {
+            if(!correctOptions.has(row.questionid))
+                correctOptions.set(row.questionid, new Set<number>());
+            correctOptions.get(row.questionid)!.add(row.optionid);
+        });
+
+        //Calculating player score
+        let playerScore : number = 0;
+        let pointsPerOption : number = 0; //The points per correct option
+        let correctOptionsSet : Set<number> | undefined = undefined; //The set of correct options for the current question 
+        userChoices.choices.forEach((question) => {
+            correctOptionsSet = correctOptions.get(question.questionId);
+            pointsPerOption = pointsPerQuestion / correctOptionsSet!.size;
+            question.optionIds.forEach((optionId) => {
+                if(correctOptionsSet!.has(optionId))
+                    playerScore += pointsPerOption;
+            });
+        });
+
+        resp.status(200).json({success: true, score: playerScore});
+    }
+    catch(err)
+    {
+        console.log(err);
+        resp.sendStatus(500);
+    }
+}
+
 /**************************Functions**********************/
 
 /**************************Exports**********************/
-export {createPoll, getPoll, addVoteToPoll, getUserPolls, addGuestVote, createQuiz, getUserQuizResults};
+export {createPoll, getPoll, addVoteToPoll, getUserPolls, addGuestVote, createQuiz, getUserQuizResults, getGuestQuizResults, getQuiz};
 
