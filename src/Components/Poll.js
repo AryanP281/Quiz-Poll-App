@@ -33,8 +33,6 @@ function Poll()
         checkIfGuestUserHasVoted(userAuthStatus, setVoted);
     }, []);
 
-    console.log("Poll")
-
     return (
         <div className="poll">
             <div className="poll-box">

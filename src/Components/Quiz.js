@@ -4,11 +4,12 @@ import { useEffect } from "react";
 import toast from "react-hot-toast";
 import {useSelector, useDispatch} from "react-redux"
 import { useHistory, useParams } from "react-router";
-import { apiBaseUrl } from "../Config/Config";
+import { apiBaseUrl, authStatus } from "../Config/Config";
 import { updateQuizState } from "../Redux/Slices/QuizSlice";
 
 /**************************Variables*********************** */
 const quizDetailsBaseUrl = `${apiBaseUrl}/content/quiz`; //The url to retrieve the quiz details
+const userAttemptBaseUrl = `${apiBaseUrl}/content/attemptedquiz`; //The url to check if the currently logged user has already attempted the quiz
 
 /**************************Components*********************** */
 function Quiz()
@@ -18,14 +19,23 @@ function Quiz()
     const dispatch = useDispatch();
     const history = useHistory();
 
-    console.log(quizDetails)
-
-    useEffect(() => {
-        //Loading the quiz details
-        loadQuizDetails(quizId, dispatch)
+    //Getting the user auth status
+    const userAuthStatus = (sessionStorage.getItem("authStatus") === null) ? authStatus.guest : sessionStorage.getItem("authStatus");
+    useEffect(async () => {
+        //Checking if user has already attempted the quiz
+        if(userAuthStatus === authStatus.logged)
+        {
+            const hasAttempted = await checkUserHasAttemptedQuiz(quizId);
+            console.log(hasAttempted)
+            if(!hasAttempted)
+                loadQuizDetails(quizId, dispatch) //Loading the quiz details
+            else
+                history.replace(`/results/${quizId}`);
+        }
+        else
+            loadQuizDetails(quizId, dispatch) //Loading the quiz details
+        
     }, []);
-
-    console.log(quizDetails)
 
     return (
         <div className="background" style={{display: "flex", justifyContent: "center", alignItems: "center"}}>
@@ -43,6 +53,33 @@ function Quiz()
 }
 
 /**************************Functions*********************** */
+function checkUserHasAttemptedQuiz(quizId)
+{
+    /*Checks if the currently logged user has already attempted the quiz*/
+
+    return new Promise((res) => {
+        fetch(`${userAttemptBaseUrl}/${quizId}`, {
+            method: "GET",
+            credentials: "include"
+        })
+        .then((resp) => {
+            if(resp.status !== 200)
+                throw Error(resp.status);
+            return resp.json();
+        })
+        .then((data) => {
+            if(!data.success)
+                throw Error(data);
+            console.log(data)
+            res(data.hasAttempted);
+        })
+        .catch((err) => {
+            console.log(err);
+            res(false);
+        });
+    });
+}
+
 function loadQuizDetails(quizId, dispatch)
 {
     /*Loads and updates the quiz details */
@@ -60,8 +97,7 @@ function loadQuizDetails(quizId, dispatch)
             throw Error(data.code)
 
         const quiz = data.quizDetails;
-        console.log(quiz)
-        dispatch(updateQuizState({title: quiz.title, creator: quiz.creator, totalScore: quiz.score, questions: quiz.questions}))
+        dispatch(updateQuizState({quizId: parseInt(quizId), title: quiz.title, creator: quiz.creator, totalScore: quiz.score, questions: quiz.questions}))
     })
     .catch((err) => {
         console.log(err);

@@ -6,6 +6,7 @@ import { createSlice } from "@reduxjs/toolkit";
 const quizDetailsSlice = createSlice({
     name: "Quiz",
     initialState: {
+        quizId: undefined,
         title: "",
         questions: [],
         creator: "",
@@ -23,7 +24,8 @@ function updateState(state, action)
     /*Updates the quiz state*/
 
     const newState = action.payload;
-
+    if(newState.quizId)
+        state.quizId = newState.quizId;
     if(newState.title)
         state.title = newState.title;
     if(newState.questions)
@@ -39,6 +41,7 @@ function resetState(state, action)
     /*Resets the quiz state to the initial state*/
 
     state = {
+        quizId: undefined,
         title: "",
         questions: [],
         creator: "",

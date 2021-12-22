@@ -11,6 +11,7 @@ import NewQuizQuestions from "./Components/NewQuizQuestions";
 import Quiz from "./Components/Quiz";
 import { Toaster } from "react-hot-toast";
 import QuizQuestion from "./Components/QuizQuestion";
+import QuizResults from "./Components/QuizResults";
 
 function App() 
 {
@@ -59,6 +60,10 @@ function App()
 
           <Route path="/quiz/:quizId">
             <Quiz />
+          </Route>
+
+          <Route path="/results/:quizId">
+            <QuizResults />
           </Route>
 
         </Switch>

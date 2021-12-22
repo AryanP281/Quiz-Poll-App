@@ -735,13 +735,30 @@ input {
 }
 
 #submission-titlebar {
-    flex-basis: 15%;
-    width: 100%;
-    display: flex;
-    box-shadow: 2px 2px 5px 1px black;
-    padding: 2px;
-    align-items: stretch;
+  flex-basis: 15%;
+  width: 100%;
+  display: flex;
+  box-shadow: 2px 2px 5px 1px black;
+  padding: 2px;
+  align-items: stretch;
 }
+
+#submission-msg {
+  flex-basis: 75%;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#submission-msg button {
+  background-color: var(--bg-gradient-start);
+  color: white;
+  padding: 10px;
+  font-size: 25px;
+}
+
 
 /******************************Home************************/
 .home {
