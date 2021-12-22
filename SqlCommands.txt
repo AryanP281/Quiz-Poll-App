@@ -34,14 +34,19 @@ ALTER TABLE "QuizOption" ADD CONSTRAINT quizoption_question_fk FOREIGN KEY (quiz
 
 ALTER TABLE "QuizOption" ADD PRIMARY KEY (quizid, questionid, optionid);
 
-CREATE TABLE "QuizScores" (quizid INT, userhash CHAR(32), score REAL DEFAULT 0.0);
+CREATE TABLE "QuizResults"(quizId INT, userHash CHAR(32), questionId INT, optionID INT);
 
-ALTER TABLE "QuizScores" ADD CONSTRAINT score_quiz_fk FOREIGN KEY (quizid) REFERENCES "Quiz"(quizid);
+ALTER TABLE "QuizResults" ADD CONSTRAINT quizresult_quiz_fk FOREIGN KEY(quizId,questionId,optionId) REFERENCES "QuizOption"(quizId,questionId,optionId);
 
-ALTER TABLE "QuizScores" ADD CONSTRAINT score_user_fk FOREIGN KEY (userhash) REFERENCES "User"(userhash);
+ALTER TABLE "QuizResults" ADD CONSTRAINT quizresult_user_fk FOREIGN KEY(userHash) REFERENCES "User"(userHash);
 
-ALTER TABLE "QuizScores" ADD PRIMARY KEY (quizid,userhash);
+ALTER TABLE "QuizResults" ADD PRIMARY KEY (quizId,questionId,optionId,userHash);
 
+CREATE TABLE "QuizScores"(quizid INT, userhash CHAR(32), score SMALLINT NOT NULL);
 
+ALTER TABLE "QuizScores" ADD CONSTRAINT quizscores_quiz_fk FOREIGN KEY(quizid) REFERENCES "Quiz"(quizid) ON DELETE CASCADE ON UPDATE CASCADE;
 
+ALTER TABLE "QuizScores" ADD CONSTRAINT quizscores_user_fk FOREIGN KEY(userhash) REFERENCES "User"(userhash) ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "QuizScores" ADD PRIMARY KEY(quizid,userhash);
 

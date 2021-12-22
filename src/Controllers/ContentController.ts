@@ -1,7 +1,6 @@
 /**************************Imports**********************/
 import {Request, Response} from "express";
 import { PoolClient } from "pg";
-import internal from "stream";
 import {responseCodes } from "../Config/App";
 import {db} from "../Config/Postgres";
 
@@ -254,7 +253,7 @@ async function createQuiz(req: Request, resp: Response) : Promise<void>
 
 }
 
-async function getUserQuizResults(req : Request, resp : Response) : Promise<void>
+async function saveUserQuizResults(req : Request, resp : Response) : Promise<void>
 {
     /*Calculates and returns the user score for the given quiz*/
 
@@ -269,22 +268,26 @@ async function getUserQuizResults(req : Request, resp : Response) : Promise<void
     req.body.userChoices.choices.forEach((question : {questionId:string,optionIds:string[]}) => {
         const newChoice: {questionId: number, optionIds: number[]} = {questionId: parseInt(question.questionId), optionIds: []};
         question.optionIds.forEach((id:string) => newChoice.optionIds.push(parseInt(id)));
+        userChoices.choices.push(newChoice);
     });
 
+    let dbConn : PoolClient | null = null;
     try
     {
+         //Getting a connection from the connection poll
+         dbConn = await db!.connect()
+        
         //Checking if the user has already participated in the quiz
-        const hasAlreadyAttempted : boolean = (await db!.query("SELECT COUNT(score) FROM \"QuizScores\" WHERE quizid=$1 AND userhash=$2",
-        [userChoices.quizId, req.body.userId])).rows[0].count == 1;
+        const hasAlreadyAttempted : boolean = (await dbConn.query("SELECT COUNT(*) FROM \"QuizScores\" WHERE quizid=$1 AND userhash=$2", 
+        [userChoices.quizId, req.body.userId])).rows[0].count != 0;
         if(hasAlreadyAttempted)
         {
             resp.status(200).json({success: false, code: responseCodes.user_already_participated});
             return;
         }
         
-        
         //Calculating the points per question for the quiz
-        const quizScoreDetails : {score: number, questioncount: number | string} = (await db!.query("SELECT Q.score, COUNT(O.questionid) AS questioncount FROM \"Quiz\" Q, \"QuizQuestion\" O WHERE O.quizid=Q.quizid AND Q.quizid=$1 GROUP BY Q.score", 
+        const quizScoreDetails : {score: number, questioncount: number | string} = (await dbConn.query("SELECT Q.score, COUNT(O.questionid) AS questioncount FROM \"Quiz\" Q, \"QuizQuestion\" O WHERE O.quizid=Q.quizid AND Q.quizid=$1 GROUP BY Q.score", 
         [userChoices.quizId])).rows[0];
         quizScoreDetails.questioncount = parseInt(quizScoreDetails.questioncount as string);
         const pointsPerQuestion : number = quizScoreDetails.score / quizScoreDetails.questioncount; 
@@ -300,28 +303,85 @@ async function getUserQuizResults(req : Request, resp : Response) : Promise<void
 
         //Calculating player score
         let playerScore : number = 0;
-        let pointsPerOption : number = 0; //The points per correct option
         let correctOptionsSet : Set<number> | undefined = undefined; //The set of correct options for the current question 
         userChoices.choices.forEach((question) => {
             correctOptionsSet = correctOptions.get(question.questionId);
-            pointsPerOption = pointsPerQuestion / correctOptionsSet!.size;
-            question.optionIds.forEach((optionId) => {
-                if(correctOptionsSet!.has(optionId))
-                    playerScore += pointsPerOption;
-            });
+            let allCorrect : boolean = true;
+            for(let i = 0; i < question.optionIds.length && allCorrect; ++i)
+            {
+                allCorrect = (allCorrect && correctOptionsSet!.has(question.optionIds[i]));
+            }
+            if(allCorrect)
+                playerScore += pointsPerQuestion;
         });
 
-        //Saving the user results
-        await db!.query("INSERT INTO \"QuizScores\" VALUES ($1,$2,$3)", [userChoices.quizId, req.body.userId, playerScore]);
+        //Starting the transaction
+        await dbConn.query("START TRANSACTION");
 
-        resp.status(200).json({success: true, score: playerScore});
+        //Saving the user results
+        let sqlQuery = "INSERT INTO \"QuizResults\"(quizid,questionid,optionid,userhash) VALUES ";
+        userChoices.choices.forEach((question : {questionId: number, optionIds: number[]}) => {
+            question.optionIds.forEach((optionId : number) => {
+                sqlQuery += `(${userChoices.quizId},${question.questionId},${optionId},'${req.body.userId}'),`;
+            });
+        });
+        sqlQuery = sqlQuery.slice(0, sqlQuery.length-1); //Getting rid of the trailing comma after the last tuple
+        await dbConn.query(sqlQuery);
+
+        //Saving the user score
+        await dbConn.query("INSERT INTO \"QuizScores\"(quizid,userhash,score) VALUES($1,$2,$3)", [userChoices.quizId, req.body.userId, playerScore]);
+
+        //Committing the transaction
+        await dbConn.query("COMMIT");
+
+        resp.status(200).json({success: true, code: responseCodes.success});
+    }
+    catch(err)
+    {
+        //Rolling back the transaction
+        await dbConn?.query("ROLLBACK");
+
+        console.log(err);
+        resp.sendStatus(500);
+    }
+    finally
+    {
+        dbConn?.release();
+    }
+
+}
+
+async function getUserQuizResults(req : Request, resp: Response) : Promise<void>
+{
+    //Checking if quiz id has been provided
+    if(!req.params.quizId)
+    {
+        resp.status(200).json({success: false, code: responseCodes.content_not_found});
+        return;
+    }
+
+    try
+    {
+        const userResults : {quizId:string, score: number, questions:{questionId:number,choices:{optionId:number,isAns:boolean}[]}[]} = {quizId: req.params.quizId, score: 0, questions:[]};
+        
+        //Getting the user choices
+        const sqlQuery : string = "SELECT O.questionid,O.optionid,O.isans,S.score FROM \"QuizResults\" R INNER JOIN \"QuizOption\" O ON O.quizid=R.quizid AND O.questionid=R.questionid AND O.optionid=R.optionid INNER JOIN \"QuizScores\" S ON S.quizid=R.quizid AND S.userhash=R.userhash WHERE R.quizid=$1 AND R.userhash=$2;";
+        const queryResults : any[] = (await db!.query(sqlQuery, [req.params.quizId, req.body.userId])).rows;
+        for(let i = 0; i < queryResults.length; ++i)
+        {
+            if(i === 0 || queryResults[i].questionid !== queryResults[i-1].questionid)
+                userResults.questions.push({questionId:queryResults[i].questionid,choices:[]});
+            userResults.questions[userResults.questions.length-1].choices.push({optionId: queryResults[i].optionid, isAns: queryResults[i].isans});
+        }
+        userResults.score = queryResults[0].score;
+        
+        resp.status(200).json({success:true, userResults});
     }
     catch(err)
     {
         console.log(err);
         resp.sendStatus(500);
     }
-
 }
 
 async function getQuiz(req: Request, resp: Response) : Promise<void>
@@ -401,20 +461,58 @@ async function getGuestQuizResults(req : Request, resp: Response) : Promise<void
             correctOptions.get(row.questionid)!.add(row.optionid);
         });
 
+        //Creating the user results object
+        const userResults : {quizId:string,score:number,questions:{questionId:number,choices:{optionId:number,isAns:boolean}[]}[]} = {
+            quizId: req.body.userChoices.quizId,
+            score: 0,
+            questions: []
+        };
+
         //Calculating player score
-        let playerScore : number = 0;
-        let pointsPerOption : number = 0; //The points per correct option
         let correctOptionsSet : Set<number> | undefined = undefined; //The set of correct options for the current question 
         userChoices.choices.forEach((question) => {
+            userResults.questions.push({questionId: question.questionId, choices:[]}); //Adding the question to the user results
+
             correctOptionsSet = correctOptions.get(question.questionId);
-            pointsPerOption = pointsPerQuestion / correctOptionsSet!.size;
-            question.optionIds.forEach((optionId) => {
-                if(correctOptionsSet!.has(optionId))
-                    playerScore += pointsPerOption;
-            });
+            
+            let allCorrect : boolean = true;
+            for(let i = 0; i < question.optionIds.length; ++i)
+            {
+                allCorrect = (allCorrect && correctOptionsSet!.has(question.optionIds[i]));
+                userResults.questions[userResults.questions.length-1].choices.push({optionId: question.optionIds[i], 
+                    isAns: correctOptionsSet!.has(question.optionIds[i])}) //Adding option to user results
+            }
+            if(allCorrect)
+                userResults.score += pointsPerQuestion;
+
         });
 
-        resp.status(200).json({success: true, score: playerScore});
+        resp.status(200).json({success: true, guestResults: userResults});
+    }
+    catch(err)
+    {
+        console.log(err);
+        resp.sendStatus(500);
+    }
+}
+
+async function checkUserAttemptedQuiz(req : Request, resp: Response) : Promise<void>
+{
+    /*Checks if the user has already attempted the given quiz*/
+
+    try
+    {
+        const quizId : number | undefined = parseInt(req.params.quizId); //Getting the quiz id
+        if(!quizId)
+        {
+            resp.status(200).json({success: false, code: responseCodes.content_not_found});
+            return;
+        }
+
+        const hasAttempted : boolean = parseInt((await db!.query("SELECT COUNT(*) FROM \"QuizScores\" WHERE quizid=$1 AND userhash=$2", 
+        [quizId,req.body.userId])).rows[0].count) !== 0;
+
+        resp.status(200).json({success:true,hasAttempted});
     }
     catch(err)
     {
@@ -426,5 +524,6 @@ async function getGuestQuizResults(req : Request, resp: Response) : Promise<void
 /**************************Functions**********************/
 
 /**************************Exports**********************/
-export {createPoll, getPoll, addVoteToPoll, getUserPolls, addGuestVote, createQuiz, getUserQuizResults, getGuestQuizResults, getQuiz};
+export {createPoll, getPoll, addVoteToPoll, getUserPolls, addGuestVote, createQuiz, saveUserQuizResults, getUserQuizResults, 
+    getGuestQuizResults, getQuiz, checkUserAttemptedQuiz};
 
