@@ -119,7 +119,6 @@ async function addVoteToPoll(req : Request, resp : Response) : Promise<void>
 
         //Checking if the user has already voted in the poll
         const userVote : any = (await db!.query("SELECT COUNT(voteId) AS vote FROM \"PollVote\" WHERE userHash=$1 AND pollId=$2", [req.body.userId, voteDetails.pollId])).rows[0]
-        console.log(userVote)
         if(parseInt(userVote.vote))
         {
             resp.status(200).json({success: false, code : responseCodes.user_already_participated});
@@ -362,18 +361,40 @@ async function getUserQuizResults(req : Request, resp: Response) : Promise<void>
 
     try
     {
-        const userResults : {quizId:string, score: number, questions:{questionId:number,choices:{optionId:number,isAns:boolean}[]}[]} = {quizId: req.params.quizId, score: 0, questions:[]};
+        //Checking if the user has participated in the quiz
+        const hasAlreadyAttempted : boolean = (await db!.query("SELECT COUNT(*) FROM \"QuizScores\" WHERE quizid=$1 AND userhash=$2", 
+        [parseInt(req.params.quizId), req.body.userId])).rows[0].count != 0;
+        if(!hasAlreadyAttempted)
+        {
+            resp.status(200).json({success: false, code: responseCodes.user_not_participated});
+            return;
+        }
         
-        //Getting the user choices
-        const sqlQuery : string = "SELECT O.questionid,O.optionid,O.isans,S.score FROM \"QuizResults\" R INNER JOIN \"QuizOption\" O ON O.quizid=R.quizid AND O.questionid=R.questionid AND O.optionid=R.optionid INNER JOIN \"QuizScores\" S ON S.quizid=R.quizid AND S.userhash=R.userhash WHERE R.quizid=$1 AND R.userhash=$2;";
-        const queryResults : any[] = (await db!.query(sqlQuery, [req.params.quizId, req.body.userId])).rows;
+        const userResults : {quizId:string, title:string, totalScore:number,score:number 
+            questions:{questionId:number, text: string, options:{optionId:number,text:string,isAns:boolean,marked:boolean}[]}[]} = {
+                quizId: req.params.quizId,
+                title: "",
+                totalScore: 0,
+                score:0,
+                questions: []
+        };
+        
+        //Getting the results
+        const sqlQuery : string = "SELECT Q.title,Q.score,S.questionid,S.text AS questiontext,O.optionid,O.text AS optiontext,O.isans,R.userhash,P.score AS userscore  FROM \"QuizOption\" O LEFT JOIN \"QuizResults\" R ON R.quizid=O.quizid AND R.questionid=O.questionid AND R.optionid=O.optionid AND R.userhash=$1 JOIN \"Quiz\" Q ON Q.quizid=O.quizid JOIN \"QuizQuestion\" S ON S.quizid=O.quizid AND S.questionid=O.questionid LEFT JOIN \"QuizScores\" P ON P.quizid=O.quizid AND P.userhash=R.userhash WHERE O.quizid=$2 ORDER BY O.questionid";
+        const queryResults : any[] = (await db!.query(sqlQuery, [req.body.userId, req.params.quizId])).rows;
+        userResults.title = queryResults[0].title;
+        userResults.totalScore = queryResults[0].score;
         for(let i = 0; i < queryResults.length; ++i)
         {
             if(i === 0 || queryResults[i].questionid !== queryResults[i-1].questionid)
-                userResults.questions.push({questionId:queryResults[i].questionid,choices:[]});
-            userResults.questions[userResults.questions.length-1].choices.push({optionId: queryResults[i].optionid, isAns: queryResults[i].isans});
-        }
-        userResults.score = queryResults[0].score;
+                userResults.questions.push({questionId:queryResults[i].questionid, text: queryResults[i].questiontext, options:[]});
+            
+                userResults.questions[userResults.questions.length-1].options.push({optionId:queryResults[i].optionId,
+                text:queryResults[i].optiontext,isAns:queryResults[i].isans,marked:queryResults[i].userhash!==null});
+
+            if(queryResults[i].userscore !== null)
+                    userResults.score = queryResults[i].userscore
+        }    
         
         resp.status(200).json({success:true, userResults});
     }
@@ -407,7 +428,7 @@ async function getQuiz(req: Request, resp: Response) : Promise<void>
         }
 
         //Retrieving the question details
-        sqlQuery = "SELECT Q.questionid,Q.text AS questiontext,Q.ismcq,O.optionid,O.text AS optiontext FROM \"QuizQuestion\" Q, \"QuizOption\" O WHERE O.questionid=Q.questionid AND O.quizid=Q.quizid AND Q.quizid=$1 ORDER BY Q.questionid";
+        sqlQuery = "SELECT Q.questionid,Q.text AS questiontext,Q.ismcq,O.optionid,O.text AS optiontext,O.isans FROM \"QuizQuestion\" Q, \"QuizOption\" O WHERE O.questionid=Q.questionid AND O.quizid=Q.quizid AND Q.quizid=$1 ORDER BY Q.questionid";
         const questionsDetails : any[] = (await db!.query(sqlQuery, [quizId])).rows;
         quizDetails.questions = []; //Initalizing the questions list
         questionsDetails.forEach((det) => {
@@ -447,44 +468,53 @@ async function getGuestQuizResults(req : Request, resp: Response) : Promise<void
     {
 
         //Calculating the points per question for the quiz
-        const quizScoreDetails : {score: number, questioncount: number | string} = (await db!.query("SELECT Q.score, COUNT(O.questionid) AS questioncount FROM \"Quiz\" Q, \"QuizQuestion\" O WHERE O.quizid=Q.quizid AND Q.quizid=$1 GROUP BY Q.score", 
+        const quizScoreDetails : {score: number, questioncount: number | string, title: string} = (await db!.query("SELECT Q.score, COUNT(O.questionid) AS questioncount, (SELECT title FROM \"Quiz\" WHERE quizid=$1) FROM \"Quiz\" Q, \"QuizQuestion\" O WHERE O.quizid=Q.quizid AND Q.quizid=$1 GROUP BY Q.score", 
         [userChoices.quizId])).rows[0];
         quizScoreDetails.questioncount = parseInt(quizScoreDetails.questioncount as string);
         const pointsPerQuestion : number = quizScoreDetails.score / quizScoreDetails.questioncount; 
 
-        //Getting the correct options for each question
-        const correctOptions : Map<number, Set<number>> = new Map();
-        (await db!.query("SELECT questionid,optionid FROM \"QuizOption\" WHERE quizid=$1 AND isans=true", 
-        [userChoices.quizId])).rows.forEach((row : {questionid: number, optionid: number}) => {
-            if(!correctOptions.has(row.questionid))
-                correctOptions.set(row.questionid, new Set<number>());
-            correctOptions.get(row.questionid)!.add(row.optionid);
-        });
-
         //Creating the user results object
-        const userResults : {quizId:string,score:number,questions:{questionId:number,choices:{optionId:number,isAns:boolean}[]}[]} = {
-            quizId: req.body.userChoices.quizId,
-            score: 0,
-            questions: []
+        const userResults : {quizId:number, title:string, totalScore:number,score:number 
+            questions:{questionId:number, text: string, options:{optionId:number,text:string,isAns:boolean,marked:boolean}[]}[]} = {
+                quizId: userChoices.quizId,
+                title: quizScoreDetails.title,
+                totalScore: quizScoreDetails.score,
+                score:0,
+                questions: []
         };
 
-        //Calculating player score
+        //Getting the correct options for each question
+        const correctOptions : Map<number, Set<number>> = new Map();
+        const questionDetails = (await db!.query("SELECT Q.questionid,Q.text AS qtext,O.optionid,O.text,O.isans FROM \"QuizQuestion\" Q,\"QuizOption\" O WHERE O.quizid=Q.quizid AND O.questionid=Q.questionid AND Q.quizid=$1 ORDER BY Q.questionid",
+        [userChoices.quizId])).rows;
+        for(let i = 0; i < questionDetails.length; ++i)
+        {
+            if(i === 0 || questionDetails[i-1].questionid !== questionDetails[i].questionid)
+            {
+                userResults.questions.push({questionId: questionDetails[i].questionid,text:questionDetails[i].qtext,options:[]});
+                correctOptions.set(questionDetails[i].questionid, new Set());
+            }
+            
+            userResults.questions[userResults.questions.length-1].options.push({optionId:questionDetails[i].optionid, 
+                text: questionDetails[i].text,isAns:questionDetails[i].isans,marked:false});
+            
+            if(questionDetails[i].isans)
+                correctOptions.get(questionDetails[i].questionid)!.add(questionDetails[i].optionid);
+        }
+        
+        //Calculating the user score
         let correctOptionsSet : Set<number> | undefined = undefined; //The set of correct options for the current question 
         userChoices.choices.forEach((question) => {
-            userResults.questions.push({questionId: question.questionId, choices:[]}); //Adding the question to the user results
-
             correctOptionsSet = correctOptions.get(question.questionId);
             
             let allCorrect : boolean = true;
             for(let i = 0; i < question.optionIds.length; ++i)
             {
                 allCorrect = (allCorrect && correctOptionsSet!.has(question.optionIds[i]));
-                userResults.questions[userResults.questions.length-1].choices.push({optionId: question.optionIds[i], 
-                    isAns: correctOptionsSet!.has(question.optionIds[i])}) //Adding option to user results
+                userResults.questions[question.questionId].options[question.optionIds[i]].marked = true;
             }
             if(allCorrect)
                 userResults.score += pointsPerQuestion;
-
         });
 
         resp.status(200).json({success: true, guestResults: userResults});
@@ -521,9 +551,109 @@ async function checkUserAttemptedQuiz(req : Request, resp: Response) : Promise<v
     }
 }
 
+async function getUserQuizzes(req: Request, resp : Response) : Promise<void> 
+{
+    try
+    {
+        //Getting the user quizzes
+        const userQuizzes : any[] = (await db!.query("SELECT quizid,title,score, (SELECT COUNT(quizid) FROM \"QuizScores\" WHERE quizid=Q.quizid) AS attempts FROM \"Quiz\" Q WHERE creatorhash=$1", [req.body.userId])).rows;
+
+        resp.status(200).json({success: true, userQuizzes});
+    }
+    catch(err)
+    {
+        console.log(err);
+        resp.sendStatus(500);
+    }
+}
+
+async function deletePoll(req: Request, resp: Response) : Promise<void> 
+{
+    let dbConn : PoolClient | null = null;
+    try
+    {
+        //Getting a connection from the pool
+        dbConn = await db!.connect();
+
+        const pollId : number = parseInt(req.params.pollId);
+
+        //Checking if the user has created the poll
+        const creatorHash : string | null = (await db!.query("SELECT creatorhash FROM \"Poll\" WHERE pollid=$1", [pollId])).rows[0].creatorhash; 
+        if(!creatorHash || creatorHash !== req.body.userId)
+        {
+            resp.sendStatus(403);
+            return;
+        }
+
+        //Start a new transaction
+        await dbConn!.query("START TRANSACTION");
+
+        //Deleting the poll. Delete will cascade to all other tables
+        await dbConn!.query("DELETE FROM \"Poll\" WHERE pollid=$1", [pollId]);
+
+        //Committing the transaction
+        await dbConn!.query("COMMIT");
+
+        resp.status(200).json({success: true, code: responseCodes.success});
+    }
+    catch(err)
+    {
+        console.log(err);
+        resp.sendStatus(500);
+
+        //Rolling back the transaction
+        await dbConn?.query("ROLLBACK");
+    }
+    finally {
+        dbConn?.release();
+    }
+}
+
+async function deleteQuiz(req: Request, resp: Response) : Promise<void> 
+{
+    let dbConn : PoolClient | null = null;
+    try
+    {
+        //Getting a connection from the pool
+        dbConn = await db!.connect();
+
+        const quizId : number = parseInt(req.params.quizId);
+
+        //Checking if the user has created the poll
+        const creatorHash : string | null = (await db!.query("SELECT creatorhash FROM \"Quiz\" WHERE quizid=$1", [quizId])).rows[0].creatorhash; 
+        if(!creatorHash || creatorHash !== req.body.userId)
+        {
+            resp.sendStatus(403);
+            return;
+        }
+
+        //Start a new transaction
+        await dbConn!.query("START TRANSACTION");
+
+        //Deleting the poll. Delete will cascade to all other tables
+        await dbConn!.query("DELETE FROM \"Quiz\" WHERE quizid=$1", [quizId]);
+
+        //Committing the transaction
+        await dbConn!.query("COMMIT");
+
+        resp.status(200).json({success: true, code: responseCodes.success});
+    }
+    catch(err)
+    {
+        console.log(err);
+        resp.sendStatus(500);
+
+        //Rolling back the transaction
+        await dbConn?.query("ROLLBACK");
+    }
+    finally {
+        dbConn?.release();
+    }
+}
+
 /**************************Functions**********************/
 
 /**************************Exports**********************/
 export {createPoll, getPoll, addVoteToPoll, getUserPolls, addGuestVote, createQuiz, saveUserQuizResults, getUserQuizResults, 
-    getGuestQuizResults, getQuiz, checkUserAttemptedQuiz};
+    getGuestQuizResults, getQuiz, checkUserAttemptedQuiz, getUserQuizzes, deletePoll, deleteQuiz};
 

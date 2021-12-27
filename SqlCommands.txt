@@ -30,15 +30,15 @@ ALTER TABLE "QuizQuestion" ADD PRIMARY KEY (quizid,questionid);
 
 CREATE TABLE "QuizOption"(quizid INT, questionid SMALLINT, optionid SMALLINT, text VARCHAR(100) NOT NULL, isans BOOL DEFAULT FALSE);
 
-ALTER TABLE "QuizOption" ADD CONSTRAINT quizoption_question_fk FOREIGN KEY (quizid, questionid) REFERENCES "QuizQuestion" (quizid, questionid);
+ALTER TABLE "QuizOption" ADD CONSTRAINT quizoption_question_fk FOREIGN KEY (quizid, questionid) REFERENCES "QuizQuestion" (quizid, questionid) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE "QuizOption" ADD PRIMARY KEY (quizid, questionid, optionid);
 
 CREATE TABLE "QuizResults"(quizId INT, userHash CHAR(32), questionId INT, optionID INT);
 
-ALTER TABLE "QuizResults" ADD CONSTRAINT quizresult_quiz_fk FOREIGN KEY(quizId,questionId,optionId) REFERENCES "QuizOption"(quizId,questionId,optionId);
+ALTER TABLE "QuizResults" ADD CONSTRAINT quizresult_quiz_fk FOREIGN KEY(quizId,questionId,optionId) REFERENCES "QuizOption"(quizId,questionId,optionId) ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE "QuizResults" ADD CONSTRAINT quizresult_user_fk FOREIGN KEY(userHash) REFERENCES "User"(userHash);
+ALTER TABLE "QuizResults" ADD CONSTRAINT quizresult_user_fk FOREIGN KEY(userHash) REFERENCES "User"(userHash) ON DELETE CASCADE ON UPDATE CASCADE;
 
 ALTER TABLE "QuizResults" ADD PRIMARY KEY (quizId,questionId,optionId,userHash);
 
