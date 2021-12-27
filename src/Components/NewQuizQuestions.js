@@ -11,6 +11,7 @@ import toast from "react-hot-toast";
 
 /********************************Variables*************************** */
 const createQuizApiUrl = `${apiBaseUrl}/content/createquiz`; //The api url to save the quiz
+let quizCreationSemaphore = false; //Prevents multiple copies of the same quiz from being created
 
 /********************************Component*************************** */
 function NewQuizQuestions()
@@ -97,11 +98,11 @@ function OptionCard(props)
 
     return (
         <div className="option-card" key={props.option.id}>
-            <label style={{fontSize: "15px", paddingTop: "10px"}}>Is Answer: </label>
+            <label>Is Answer: </label>
             <input className="option-is-answer" type="checkbox" checked={props.option.isAns} onChange={() => updateOption({isAns: !props.option.isAns})} />
             <input style={{flexBasis: "70%", flexGrow: 1}} className="textbox" type="text" placeholder="Enter Option" 
             value={props.option.text} onChange={(e) => updateOption({text: e.target.value})}/>
-            <button style={{flexBasis: "5%", marginLeft: "2%"}} onClick={deleteOption}><FcDeleteRow size="30px"/></button>
+            <button onClick={deleteOption}><FcDeleteRow size="30px"/></button>
         </div>
     );
 }
@@ -151,10 +152,14 @@ function createQuiz(newQuizDetails, history)
 {
     /*Validates and sends api request to create the new quiz */
 
+    //Checking if quiz creation request has already been sent
+    if(quizCreationSemaphore)
+        return;
+
     //Cleaning the quiz before creating request
     const cleanedQuiz = cleanQuiz(newQuizDetails);
 
-    console.log("Cleaned")
+    quizCreationSemaphore = true; //Setting the semaphore
     if(validateQuiz(cleanedQuiz))
     {
         console.log("Sending request")
@@ -190,7 +195,8 @@ function createQuiz(newQuizDetails, history)
         .catch((err) => {
             console.log(err);
             toast("Failed to create quiz");
-        });
+        })
+        .finally(() => quizCreationSemaphore = false);
 
     }
 

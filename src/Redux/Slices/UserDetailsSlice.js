@@ -10,12 +10,14 @@ const userDetailsSlice = createSlice({
         bdate: {day: 1, month: 0, year: 2000},
         initialized: false,
         profilePic: null,
-        polls : []
+        polls : [],
+        quizzes: []
     },
     reducers: {
         setUserDetails: setDetails,
         setProfilePicture : setProfilePicUrl,
         setPolls : setUserPolls,
+        setQuizzes : setUserQuizzes,
         resetDetails: resetUserDetails
     }
 })
@@ -55,6 +57,17 @@ function setUserPolls(state, action)
     action.payload.userPolls.forEach((poll) => state.polls.push(poll));
 }
 
+function setUserQuizzes(state, action)
+{
+    /*Saves the information about the quizzes created by the user */
+
+    //Clearing the previous user quizzes
+    state.quizzes.splice(0, state.quizzes.length);
+
+    //Adding the new polls
+    action.payload.userQuizzes.forEach((quiz) => state.quizzes.push(quiz));
+}
+
 function resetUserDetails(state)
 {
     /*Resets the user details*/ 
@@ -66,12 +79,13 @@ function resetUserDetails(state)
         following: 0,
         initialized: false,
         profilePic: null,
-        polls : []
+        polls : [],
+        quizzes: []
     };
 
     return resetState;
 }
 
 /**********************Exports****************** */
-export const {setUserDetails, setProfilePicture, setPolls, setAuthStatus, resetDetails} = userDetailsSlice.actions;
+export const {setUserDetails, setProfilePicture, setPolls, setAuthStatus, resetDetails, setQuizzes} = userDetailsSlice.actions;
 export default userDetailsSlice.reducer;

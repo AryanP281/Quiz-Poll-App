@@ -5,11 +5,16 @@ import { useDispatch, useSelector } from "react-redux";
 import { useHistory } from "react-router-dom";
 import {loadUserData} from "../Components/UserProfile";
 import { apiBaseUrl, authStatus } from "../Config/Config";
-import { setPolls, resetDetails } from "../Redux/Slices/UserDetailsSlice";
+import { setPolls, resetDetails, setQuizzes } from "../Redux/Slices/UserDetailsSlice";
 import defaultDp from "../Assets/Images/DefaultDp.png";
+import {MdDeleteForever} from "react-icons/md";
+import toast from "react-hot-toast";
 
 /****************************Variables************************/
 const getUserPollsApiUrl = `${apiBaseUrl}/content/userpolls`; //The api url to get the polls created by the current user 
+const getUserQuizzesApiUrl = `${apiBaseUrl}/content/userquizzes`; //The api url to get the quizzes created by the current user
+const deletePollApiBaseUrl = `${apiBaseUrl}/content/delete/poll`; //The api base url to delete polls
+const deleteQuizApiBaseUrl = `${apiBaseUrl}/content/delete/quiz`; //The api base url to delete quizzes
 const signOutApiUrl = `${apiBaseUrl}/auth/signout`; //The api url to sign out the user
 
 /****************************Component************************/
@@ -37,20 +42,27 @@ function Home()
                 loadUserData(dispatch);
             
             //Loading the user polls
-            loadUserPolls(dispatch)
+            loadUserPolls(dispatch);
+
+            //Loading user quizzes
+            loadUserQuizzes(dispatch);
         }
     }, []);
 
-    console.log("Home")
+    console.log(userDetails)
 
     return (
         <div className="home">
-            <SideBar history={history} dispatch={dispatch}/>
             <div className="dashboard">
-                <TopBar userDetails={userDetails} history={history}/>
+                <TopBar userDetails={userDetails} history={history} dispatch={dispatch}/>
                 <div className="user-polls-list">
-                    <ContentList title={`${userDetails.username}'s Polls`}>
-                        {userDetails.polls && <UserPollsTable userPolls={userDetails.polls} history={history}/>}
+                    <ContentList title={`${userDetails.username}'s Polls`} history={history} newContentUrl="/newpoll">
+                        {userDetails.polls && <UserPollsTable userPolls={userDetails.polls} history={history} dispatch={dispatch}/>}
+                    </ContentList>
+                </div>
+                <div className="user-polls-list">
+                    <ContentList title={`${userDetails.username}'s Quizzes`} history={history} newContentUrl="/newquiz">
+                        {userDetails.quizzes && <UserQuizzesTable userQuizzes={userDetails.quizzes} history={history} dispatch={dispatch}/>}
                     </ContentList>
                 </div>
             </div>
@@ -77,7 +89,8 @@ function TopBar(props)
 
     return (
         <div className="top-bar">
-            <div style={{flexBasis: "70%", flexGrow: "2"}}></div>
+        <button className="create-btn" onClick={() => signoutUser(history, props.dispatch)}>Logout</button>
+            <div id="spacer"></div>
             {userDetails.initialized && <div className="profile-details">
                 <h3>{userDetails.username}</h3>
                 <img className="user-pic" src={userDetails.profilePic ? userDetails.profilePic : defaultDp} onClick={() => history.push("/editprofile")}></img>
@@ -93,6 +106,7 @@ function ContentList(props)
         <div className="content-list">
             <div className="content-list-title">
                 <h3>{props.title}</h3>
+                <button className="create-btn" onClick={() => props.history.push(props.newContentUrl)}>New</button>
             </div>
             <div className="content-list-content">
                 {props.children}
@@ -108,7 +122,8 @@ function UserPollsTable(props)
         const pollDetails = [];
         props.userPolls.forEach((poll) => {
             pollDetails.push(<button onClick={() => props.history.push(`/poll/${poll.pollid}`)}>{poll.title}</button>);
-            pollDetails.push(<h3>{`${poll.votes} votes`}</h3>)
+            pollDetails.push(<h3>{`${poll.votes}`}</h3>);
+            pollDetails.push(<button onClick={() => deletePoll(poll.pollid, props.userPolls, props.dispatch)}> <MdDeleteForever /> </button>);
         });
         return pollDetails;
     }
@@ -116,11 +131,38 @@ function UserPollsTable(props)
     return (
         <div className="user-polls-table">
             <div className="user-polls-headers">
-                <h2 style={{borderRight: "2px solid white"}}>Poll Tile</h2>
+                <h2>Poll Title</h2>
                 <h2>Vote Counts</h2>
+                <h2>Delete</h2>
             </div>        
             <div className="user-polls-grid">
                 {displayPollDetails()}
+            </div>
+        </div>
+    );
+}
+
+function UserQuizzesTable(props)
+{
+    const displayQuizDetails = () => {
+        const quizDetails = [];
+        props.userQuizzes.forEach((quiz) => {
+            quizDetails.push(<button onClick={() => props.history.push(`/quiz/${quiz.quizid}`)}>{quiz.title}</button>);
+            quizDetails.push(<h3>{`${quiz.attempts}`}</h3>);
+            quizDetails.push(<button onClick={() => deleteQuiz(quiz.quizid, props.userQuizzes, props.dispatch)}> <MdDeleteForever /> </button>);
+        });
+        return quizDetails;
+    };
+
+    return (
+        <div className="user-polls-table">
+            <div className="user-polls-headers">
+                <h2>Quiz Title</h2>
+                <h2>Attempt Counts</h2>
+                <h2>Delete</h2>
+            </div>        
+            <div className="user-polls-grid">
+                {displayQuizDetails()}
             </div>
         </div>
     );
@@ -148,6 +190,87 @@ function loadUserPolls(dispatch)
     .catch((err) => {
         console.log(err);
     })
+}
+
+function loadUserQuizzes(dispatch)
+{
+    /* Loads info about the quizzes created by the user */
+
+    fetch(getUserQuizzesApiUrl, {
+        method: "GET",
+        credentials: "include"
+    })
+    .then((resp) => {
+        if(resp.status !== 200)
+            throw new Error(resp.status);
+        return resp.json();
+    })
+    .then((data) => {
+        if(!data.success)
+            throw new Error(data.code);
+        dispatch(setQuizzes({userQuizzes: data.userQuizzes}));
+    })
+    .catch((err) => {
+        console.log(err);
+    })
+}
+
+function deletePoll(pollId, userPolls, dispatch)
+{
+    fetch(`${deletePollApiBaseUrl}/${pollId}`, {
+        method: "DELETE",
+        credentials: "include"
+    })
+    .then((resp) => {
+        if(resp.status !== 200)
+            throw new Error(resp.status);
+        return resp.json();
+    })
+    .then((data) => {
+        if(!data.success)
+            throw new Error(data.code);
+        
+        //Updating the user polls
+        const updatedState = [];
+        userPolls.forEach((poll) => {
+            if(poll.pollid !== pollId)
+                updatedState.push(poll);
+        });
+        dispatch(setPolls({userPolls: updatedState}));
+    })
+    .catch((err) => {
+        console.log(err);
+        toast("Failed to delete poll. Try again");
+    });
+}
+
+function deleteQuiz(quizId, userQuizzes, dispatch)
+{
+    fetch(`${deleteQuizApiBaseUrl}/${quizId}`, {
+        method: "DELETE",
+        credentials: "include"
+    })
+    .then((resp) => {
+        if(resp.status !== 200)
+            throw new Error(resp.status);
+        return resp.json();
+    })
+    .then((data) => {
+        if(!data.success)
+            throw new Error(data.code);
+        
+        //Updating the user polls
+        const updatedState = [];
+        userQuizzes.forEach((quiz) => {
+            if(quiz.quizid !== quizId)
+                updatedState.push(quiz);
+        });
+        dispatch(setQuizzes({userQuizzes: updatedState}));
+    })
+    .catch((err) => {
+        console.log(err);
+        toast("Failed to delete poll. Try again");
+    });
 }
 
 function signoutUser(history, dispatch)

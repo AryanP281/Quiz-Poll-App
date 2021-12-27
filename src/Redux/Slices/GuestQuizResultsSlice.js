@@ -7,6 +7,8 @@ const guestQuizResultsSlice = createSlice({
     initialState: {
         quizId: undefined,
         score: 0,
+        totalScore:0,
+        title: "",
         questions: []
     },
     reducers: {
@@ -23,6 +25,8 @@ function setResults(state, action)
 
     state.quizId = guestResults.quizId;
     state.score = guestResults.score;
+    state.totalScore = guestResults.totalScore;
+    state.title = guestResults.title;
     state.questions = guestResults.questions;
 }
 

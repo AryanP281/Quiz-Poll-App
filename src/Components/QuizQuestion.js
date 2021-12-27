@@ -7,6 +7,9 @@ import { useState } from "react";
 import { apiBaseUrl, authStatus } from "../Config/Config";
 import toast from "react-hot-toast";
 import { useHistory } from "react-router-dom";
+import { redirectToHome } from "../Services/Services";
+import { copyShareableLink } from "./Poll";
+import { useParams } from "react-router-dom";
 
 /*************************Variables*********************** */
 const getQuizResultsUrl = `${apiBaseUrl}/content/submitquiz`; //The api url to get quiz results for logged user
@@ -24,12 +27,20 @@ function QuizQuestion()
     dispatch = useDispatch();
     history = useHistory();
 
+    //Checking if quiz has been loaded
+    const quizId = useParams().quizId;
+    if(!quizDetails.quizId)
+    {
+        history.replace(`/quiz/${quizId}`);
+        return null;
+    }
+
     return(
         <div id="quiz-questions" className="background flexible-column" style={{justifyContent: "space-around"}}>
             <div id="quiz-titlebox">
                 <div style={{width: "100%"}}>
-                    <button style={{float: "left"}}>Home</button>
-                    <button style={{float: "right"}}>Share</button>
+                    <button style={{float: "left"}} onClick={() => redirectToHome(history, true)}>Home</button>
+                    <button style={{float: "right"}} onClick={() => copyShareableLink()}>Share</button>
                 </div>
                 <h2>{quizDetails.title}</h2>
                 <h3 style={{marginTop: "20px"}}>Question: {`${questionId+1}/${quizDetails.questions.length}`}</h3>
@@ -160,6 +171,7 @@ function getQuizResults(selected, quizId)
         if(!data.success)
             throw Error(data.code);
         
+        console.log(data.guestResults)
         if(isGuest)
             dispatch(setGuestResults(data.guestResults));
         

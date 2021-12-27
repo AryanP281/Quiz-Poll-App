@@ -107,3 +107,4 @@ function loadQuizDetails(quizId, dispatch)
 
 /**************************Exports*********************** */
 export default Quiz;
+export {loadQuizDetails};

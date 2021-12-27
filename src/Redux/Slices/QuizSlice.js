@@ -40,15 +40,13 @@ function resetState(state, action)
 {
     /*Resets the quiz state to the initial state*/
 
-    state = {
-        quizId: undefined,
-        title: "",
-        questions: [],
-        creator: "",
-        score: 0
-    };
+    state.quizId = undefined;
+    state.title = "";
+    state.questions= [];
+    state.creator = "";
+    state.score = 0;
 }
 
 /************************Exports************************* */
-export const {updateQuizState} = quizDetailsSlice.actions;
+export const {updateQuizState, resetQuizState} = quizDetailsSlice.actions;
 export default quizDetailsSlice.reducer;

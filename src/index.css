@@ -505,6 +505,7 @@ input {
   width: 100%;
   margin-top: 20px;
   max-height: 80%;
+  overflow: hidden;
 }
 
 .new-question-box {
@@ -514,6 +515,7 @@ input {
   background-color: white;
   height: 100%;
   padding: 20px;
+  overflow: hidden;
 }
 
 .new-question-box form {
@@ -568,6 +570,16 @@ input {
   border: 1px solid black;
   justify-content: space-around;
   padding: 10px;
+}
+
+.new-question-box .option-card label {
+  font-size: 15px;
+  padding-top: 10px;
+}
+
+.new-question-box .option-card button {
+  flex-basis: 5%;
+  margin-left: 2%;
 }
 
 .new-question-box .option-card .option-is-answer {
@@ -701,6 +713,15 @@ input {
   border: 1px solid black;
 }
 
+.quiz-option-static {
+  padding: 20px;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  border: 2px solid black;
+  margin-top: 2px;
+}
+
 .quiz-option:hover {
   background-color: var(--bg-gradient-start);
   color: white;
@@ -810,6 +831,21 @@ input {
   display: flex;
 }
 
+.top-bar .create-btn {
+  width: 0;
+  flex-basis: 10%;
+  font-size: 12px;
+  padding: 10px;
+  align-self: center;
+  margin-top: 0;
+  margin-left: 2px;
+}
+
+.top-bar #spacer {
+  flex-basis: 60%;
+  flex-grow: 2;
+}
+
 .profile-details {
   flex-basis: 30%;
   flex-grow: 1;
@@ -833,13 +869,16 @@ input {
   flex-basis: 45%;
   display: flex;
   justify-content: center;
-  margin-top: 20px;
+  margin-bottom: 10px;
+  margin-top: 10px;
+  overflow: hidden;
 }
 
 .user-polls-table {
   height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: auto;
 }
 
 .user-polls-headers {
@@ -847,7 +886,7 @@ input {
   flex-basis: 10%;
   flex-grow: 1;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   border: 2px solid white;
   color: white;
 }
@@ -856,7 +895,7 @@ input {
   flex-basis: 90%;
   flex-grow: 2;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
 }
 
 .user-polls-grid > button {
@@ -892,10 +931,20 @@ input {
   flex-basis: 15%;
   border-bottom: 2px solid grey;
   padding: 10px;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+}
+
+.content-list-title .create-btn {
+  font-size: 10px;
+  width: 25%;
+  margin-top: 0;
+  justify-self: center;
 }
 
 .content-list-content {
   flex-basis: 85%;
+  overflow: auto;
 }
 
 /******************************Responsive Design************************/
@@ -955,7 +1004,96 @@ input {
       font-size: 18px;
       padding: 5px;
     }
+
+    .new-quiz-questions .new-question-box {
+      padding: 5px;
+      width: 76%;
+    }
+
+    .new-quiz-questions #titlebar {
+      width: 100%;
+      font-size: 10px;
+    }
+
+    .new-quiz-questions #titlebar .create-btn {
+      font-size: 10px;
+      padding: 5px;
+      margin-top: 10px;
+    }
+
+    .new-quiz-questions .new-question-box svg {
+      height: 20px;
+    }
+
+    .new-question-box .option-card {
+      flex-direction: column;
+      align-items: center;
+      padding: 5px;
+    }
+
+    .new-question-box .option-card .option-is-answer {
+      height: auto;
+      margin-top: 2px;
+    }
+
+    .new-question-box .option-card label {
+      font-size: 10px;
+    }
+
+    .new-question-box .option-card input {
+      font-size: 10px;
+    }
+
+    .new-question-box .option-card button {
+      margin-left: 1px;
+      flex-basis: 3%;
+      padding: 1px;
+    }
     
+    #quiz-box {
+      height: 50%;
+      width: 100%;
+    }
+
+    #quiz-box > div {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .questions #left-arrow {
+      width: 10%;
+    }
+
+    .questions #right-arrow {
+      width: 10%;
+      left: 90%;
+    }
+
+    .content-list {
+      flex-basis: 75%;
+      font-size: 10px;
+    }
+
+    .content-list .create-btn {
+      width: 100%;
+      padding: 2px;
+    }
+
+    .top-bar {
+      font-size: 10px;
+    }
+
+    .top-bar #spacer {
+      flex-basis: 50%;
+      flex-grow: 2;
+    }
+
+    .top-bar .create-btn {
+      flex-basis: 20%;
+      font-size: 10px;
+      padding: 5px;
+    }
 }
 
 @media screen and (max-height: 500px) {

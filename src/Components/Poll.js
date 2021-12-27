@@ -1,8 +1,10 @@
 /******************************Imports**************************** */
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { useParams } from "react-router";
 import { useHistory } from "react-router-dom";
 import {apiBaseUrl, authStatus} from "../Config/Config";
+import { redirectToHome } from "../Services/Services";
 
 /******************************Variables**************************** */
 const getPollApiBaseUrl = `${apiBaseUrl}/content/poll`; //The base url for the get poll request
@@ -34,11 +36,10 @@ function Poll()
     }, []);
 
     return (
-        <div className="poll">
+        <div className="background">
             <div className="poll-box">
                 <div className="box-title-bar" style={{flexBasis: "10%", flexGrow: 1}}>
-                    {userAuthStatus === authStatus.logged && <button onClick={() => history.push("/")}>Home</button>}
-                    {userAuthStatus === authStatus.guest && <button onClick={() => history.push("/signin")}>Sign In</button>}
+                    <button onClick={() => redirectToHome(history, true)}>Home</button>
                     <h1>{(poll && poll.title.length) ? poll.title : "Loading"}</h1>
                     <button onClick={copyShareableLink}>Share</button>
                 </div>
@@ -222,6 +223,8 @@ function copyShareableLink()
     document.execCommand('copy');
     document.body.removeChild(el);
 
+    //Displaying success message
+    toast("Message link copied");
 }
 
 function checkIfGuestUserHasVoted(userAuthStatus, setVoted)
@@ -259,3 +262,4 @@ function updateGuestVotesList(pollId, voteId)
 
 /******************************Exports**************************** */
 export default Poll;
+export {copyShareableLink}
