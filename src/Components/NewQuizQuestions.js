@@ -212,18 +212,6 @@ function validateQuiz(newQuizDetails)
         return false;
     }
 
-    const pointsPerQuestion = newQuizDetails.totalScore / newQuizDetails.questions.length;
-    for(let i = 0; i < newQuizDetails.questions.length; ++i)
-    {
-        const solsCount = newQuizDetails.questions[i].options.filter((opt) => opt.isAns).length;
-        console.log(solsCount)
-        if(pointsPerQuestion % solsCount)
-        {
-            toast(`The number of solutions to Question ${i+1} should be a factor of ${pointsPerQuestion}`);
-            return false;
-        }
-    }
-
     return true;
 }
 
